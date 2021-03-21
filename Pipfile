@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+irc = "*"
+
+[dev-packages]
+pytest = "*"
+black = "*"
+
+[pipenv]
+# for packages that are prereleases (e.g., black)
+allow_prereleases = true
+
+[requires]
+python_version = "3.8"
+
+[scripts]
+lint = "black ."
+test = "python -m pytest"
