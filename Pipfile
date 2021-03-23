@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 requests = "*"
 irc = "*"
+cachetools = "*"
+expiringdict = "*"
 
 [dev-packages]
 pytest = "*"
@@ -16,7 +18,7 @@ black = "*"
 allow_prereleases = true
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
 
 [scripts]
 lint = "black ."
