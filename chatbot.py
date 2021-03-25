@@ -12,10 +12,12 @@ import sys
 import irc.bot
 import requests
 import time
+import re
 from cachetools import cached, TTLCache
 from expiringdict import ExpiringDict
 
-TREND_WORDS = ["LUL", "0", "4", "777", "888", "555"]
+TREND_WORDS_SUBSTRING = ["LUL"]
+TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
 GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
 
 
@@ -27,22 +29,17 @@ def cooldown():
         return True
 
 
-CD_UMA = 3600
-# 1hr cooldown for command
-@cached(cache=TTLCache(maxsize=1024, ttl=CD_UMA))
-def last_timestamp(arg):
-    return int(time.time())
+uma_call_cache = ExpiringDict(max_len=1, max_age_seconds=600)
 
 
-def uma_call(conn, channel, arg):
-    if int(time.time()) - last_timestamp(arg) <= 1:
-        print(f"{int(time.time()) - last_timestamp(arg)} <= 1")
-        conn.privmsg(
+def uma_call(conn, channel, user_name):
+    if channel not in uma_call_cache:
+        talk(
+            conn,
             channel,
-            f"@{user_id} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
+            f"@{user_name} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
         )
-    else:
-        print(f"CD 等待中，還有 {CD_UMA - (int(time.time() - last_timestamp(arg)))} 秒")
+        uma_call_cache[channel] = True
 
 
 say_hi_cache = ExpiringDict(max_len=1, max_age_seconds=1800)
@@ -50,11 +47,19 @@ say_hi_cache = ExpiringDict(max_len=1, max_age_seconds=1800)
 
 def say_hi(conn, channel, user_name):
     if channel not in say_hi_cache:
-        conn.privmsg(
+        talk(
+            conn,
             channel,
             f"@{user_name} PokPikachu",
         )
         say_hi_cache[channel] = True
+
+
+def talk(conn, channel, msg):
+    if cooldown():
+        print("COOLDOWN...")
+        return
+    conn.privmsg(channel, msg)
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
@@ -77,12 +82,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         irc.bot.SingleServerIRCBot.__init__(
             self, [(server, port, "oauth:" + self.token)], username, username
         )
+        # TODO: dynamically determine
+        self.trend_threshold = 3
 
-    def talk(self, conn, msg):
-        if cooldown():
-            print("COOLDOWN...")
-            return
-        conn.privmsg(self.channel, msg)
+        self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
+        self.gbf_room_id_cache = ExpiringDict(max_len=1, max_age_seconds=600)
+        self.gbf_room_num = 0
 
     def on_welcome(self, c, e):
         print("Joining " + self.channel)
@@ -104,65 +109,95 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         timestamp_ms = e.tags[11]["value"]
         # say_hi(c, self.channel, user_name)
         print(f"{user_id:>20}: {arg}")
+        if user_id == "f1yshadow" and arg == "莉芙溫 下午好~ KonCha":
+            talk(c, self.channel, f"飛影飄泊 下午好~ KonCha")
+        if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(arg):
+            print(f"GBF room id detected: {arg}")
+            self.gbf_room_id_cache["user_id"] = arg
+            self.gbf_room_num += 1
+        if self.channel == "#wow_tomato" and arg == "!insertall":
+            pass
+            # talk(c, self.channel, f"@{user_id}, you have successfully queued. You are 1st...騙你的QAQ")
+            # talk(c, self.channel, f"@{user_id} successfully inserted 56 coins")
+            # talk(c, self.channel, f"Successfully added 5 points to {user_name}. Points: 5566")
+
+        # normalize chat. e.g. 77777777 -> 777
         if len(arg) >= 3 and len(set(arg)) == 1:
             arg = arg[:3]
-        if arg in TREND_WORDS:
+        for word in TREND_WORDS_SUBSTRING:
+            if word in arg:
+                if word not in self.push_trend_cache:
+                    self.push_trend_cache[word] = 1
+                else:
+                    self.push_trend_cache[word] += 1
+                print(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
+                if self.push_trend_cache[word] >= self.trend_threshold:
+                    talk(c, self.channel, word)
+        if arg in TREND_WORDS_MATCH:
             if arg not in self.push_trend_cache:
                 self.push_trend_cache[arg] = 1
             else:
                 self.push_trend_cache[arg] += 1
             print(f"[COUNTER] {arg}:{ self.push_trend_cache[arg]}")
-            if self.push_trend_cache[arg] >= 3:
-                self.talk(c, arg)
-        # if arg.startswith("!"):
-        #     cmd = e.arguments[0].split(" ")[0][1:]
-        #     print("Received command: " + cmd)
-        #     self.do_command(e, cmd)
+            if self.push_trend_cache[arg] >= self.trend_threshold:
+                talk(c, self.channel, arg)
+        if arg.startswith("!"):
+            cmd = arg.split(" ")[0][1:]
+            print("Received command: " + cmd)
+            self.do_command(e, cmd)
         if arg == "馬娘":
-            uma_call(arg)
+            uma_call(c, self.channel, user_name)
         return
 
-    def do_command(self, e, cmd):
+    def do_command(self, user_id, cmd):
         c = self.connection
-
+        if cmd == "code":
+            gbf_room_id = self.gbf_room_id_cache.get("user_id")
+            if gbf_room_id:
+                print(f"GBF room: {gbf_room_id}")
+                talk(
+                    c,
+                    self.channel,
+                    f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.gbf_room_num}間房 maoThinking",
+                )
         # Poll the API to get current game.
-        if cmd == "game":
-            url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
-            headers = {
-                "Client-ID": self.client_id,
-                "Accept": "application/vnd.twitchtv.v5+json",
-            }
-            r = requests.get(url, headers=headers).json()
-            c.privmsg(
-                self.channel, r["display_name"] + " is currently playing " + r["game"]
-            )
+        # if cmd == "game":
+        #    url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
+        #    headers = {
+        #        "Client-ID": self.client_id,
+        #        "Accept": "application/vnd.twitchtv.v5+json",
+        #    }
+        #    r = requests.get(url, headers=headers).json()
+        #    c.privmsg(
+        #        self.channel, r["display_name"] + " is currently playing " + r["game"]
+        #    )
 
-        # Poll the API the get the current status of the stream
-        elif cmd == "title":
-            url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
-            headers = {
-                "Client-ID": self.client_id,
-                "Accept": "application/vnd.twitchtv.v5+json",
-            }
-            r = requests.get(url, headers=headers).json()
-            c.privmsg(
-                self.channel,
-                r["display_name"] + " channel title is currently " + r["status"],
-            )
+        ## Poll the API the get the current status of the stream
+        # elif cmd == "title":
+        #    url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
+        #    headers = {
+        #        "Client-ID": self.client_id,
+        #        "Accept": "application/vnd.twitchtv.v5+json",
+        #    }
+        #    r = requests.get(url, headers=headers).json()
+        #    c.privmsg(
+        #        self.channel,
+        #        r["display_name"] + " channel title is currently " + r["status"],
+        #    )
 
-        # Provide basic information to viewers for specific commands
-        elif cmd == "raffle":
-            message = "This is an example bot, replace this text with your raffle text."
-            c.privmsg(self.channel, message)
-        elif cmd == "schedule":
-            message = (
-                "This is an example bot, replace this text with your schedule text."
-            )
-            c.privmsg(self.channel, message)
+        ## Provide basic information to viewers for specific commands
+        # elif cmd == "raffle":
+        #    message = "This is an example bot, replace this text with your raffle text."
+        #    c.privmsg(self.channel, message)
+        # elif cmd == "schedule":
+        #    message = (
+        #        "This is an example bot, replace this text with your schedule text."
+        #    )
+        #    c.privmsg(self.channel, message)
 
-        # The command was not recognized
-        else:
-            c.privmsg(self.channel, "Did not understand command: " + cmd)
+        ## The command was not recognized
+        # else:
+        #    c.privmsg(self.channel, "Did not understand command: " + cmd)
 
 
 def main():
@@ -174,6 +209,21 @@ def main():
     client_id = sys.argv[2]
     token = sys.argv[3]
     channel = sys.argv[4]
+
+    # import dill
+    # from expiringdict import ExpiringDict
+    # cache = ExpiringDict(max_len=100, max_age_seconds=10)
+    # cache['test'] = 1
+    # pickled_cache = dill.dumps(cache)
+    # unpickled_cache = dill.loads(pickled_cache)
+
+    # import signal
+    # import sys
+    #
+    # def signal_handler(sig, frame):
+    #     print("You pressed Ctrl+C!")
+    #     sys.exit(0)
+    # signal.signal(signal.SIGINT, signal_handler)
 
     bot = TwitchBot(username, client_id, token, channel)
     bot.start()
