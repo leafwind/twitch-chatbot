@@ -7,7 +7,6 @@ Licensed under the Apache License, Version 2.0 (the "License"). You may not use 
 
 or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 """
-
 import sys
 import irc.bot
 import requests
@@ -88,6 +87,24 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
         self.gbf_room_id_cache = ExpiringDict(max_len=1, max_age_seconds=600)
         self.gbf_room_num = 0
+        self.api_headers = {
+            "Client-ID": self.client_id,
+            "Accept": "application/vnd.twitchtv.v5+json",
+        }
+        self.reactor.scheduler.execute_every(5 * 60, self.insertall)
+
+    def check_onlilne(self):
+        # Poll the API to know if a channel is live or not
+        url = "https://api.twitch.tv/kraken/streams/" + self.channel_id
+        r = requests.get(url, headers=self.api_headers).json()
+        return True if r["stream"] else False
+
+    def insertall(self):
+        if self.check_onlilne():
+            print('channel is online! send chat: "!insertall"')
+            talk(self.connection, self.channel, "!insertall")
+        else:
+            print("channel is offline, skip sending !insertall")
 
     def on_welcome(self, c, e):
         print("Joining " + self.channel)
