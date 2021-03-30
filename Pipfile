@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 requests = "*"
 irc = "*"
-cachetools = "*"
 expiringdict = "*"
 
 [dev-packages]
