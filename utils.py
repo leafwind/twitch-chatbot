@@ -49,7 +49,9 @@ def filter_feature_toggle(func):
             channel_id = kwargs["channel_id"]
         except KeyError:
             try:
-                channel_id_arg_index = inspect.getfullargspec(func).args.index("channel_id")
+                channel_id_arg_index = inspect.getfullargspec(func).args.index(
+                    "channel_id"
+                )
                 channel_id = args[channel_id_arg_index]
             except ValueError:
                 channel_id = args[0].channel_id

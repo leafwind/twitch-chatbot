@@ -112,7 +112,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
     @filter_feature_toggle
     def share_clip(self):
         if self.channel_id not in CHANNEL_CLIPS:
-            print(f"{self.channel_id} is not in {CHANNEL_CLIPS.keys()}, skip share clip")
+            print(
+                f"{self.channel_id} is not in {CHANNEL_CLIPS.keys()}, skip share clip"
+            )
             return
         if not self.api_client.check_stream_online():
             print("channel is offline, skip share clip")
