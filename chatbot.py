@@ -7,16 +7,23 @@ Licensed under the Apache License, Version 2.0 (the "License"). You may not use 
 
 or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 """
+import os
 import re
+import signal
 import sys
 
+import dill
 import irc.bot
-import requests
 from expiringdict import ExpiringDict
+
+from twitch_api_client import TwitchAPIClient
 
 TREND_WORDS_SUBSTRING = ["LUL"]
 TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
 GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
+
+SERVER = "irc.chat.twitch.tv"
+PORT = 6667
 
 
 def cooldown():
@@ -65,41 +72,59 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.client_id = client_id
         self.token = token.removeprefix("oauth:")
         self.channel = "#" + channel.lower()
+        self.serialized_data_dir = "data"
+        self.serialized_data_filename = os.path.join(
+            self.serialized_data_dir, f"{self.channel[1:]}.bin"
+        )
         self.push_trend_cache = ExpiringDict(max_len=100, max_age_seconds=5)
 
-        # Get the channel id, we will need this for v5 API calls
-        url = "https://api.twitch.tv/kraken/users?login=" + channel
-        headers = {"Client-ID": client_id, "Accept": "application/vnd.twitchtv.v5+json"}
-        r = requests.get(url, headers=headers).json()
-        self.channel_id = r["users"][0]["_id"]
+        self.api_client = TwitchAPIClient(channel, client_id)
+        self.channel_id = self.api_client.channel_id
 
         # Create IRC bot connection
-        server = "irc.chat.twitch.tv"
-        port = 6667
-        print("Connecting to " + server + " on port " + str(port) + "...")
+        print(f"Connecting to {SERVER} on port {PORT}...")
         irc.bot.SingleServerIRCBot.__init__(
-            self, [(server, port, "oauth:" + self.token)], username, username
+            self, [(SERVER, PORT, "oauth:" + self.token)], username, username
         )
         # TODO: dynamically determine
         self.trend_threshold = 3
 
         self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
-        self.gbf_room_id_cache = ExpiringDict(max_len=1, max_age_seconds=600)
-        self.gbf_room_num = 0
-        self.api_headers = {
-            "Client-ID": self.client_id,
-            "Accept": "application/vnd.twitchtv.v5+json",
-        }
+
+        # setup scheduler
         self.reactor.scheduler.execute_every(5 * 60, self.insertall)
 
-    def check_onlilne(self):
-        # Poll the API to know if a channel is live or not
-        url = "https://api.twitch.tv/kraken/streams/" + self.channel_id
-        r = requests.get(url, headers=self.api_headers).json()
-        return True if r["stream"] else False
+        # load data in disk
+        try:
+            with open(self.serialized_data_filename, "rb") as f:
+                self.data = dill.loads(f.read())
+                if "gbf_room_num" not in self.data:
+                    self.data["gbf_room_num"] = 0
+                if "gbf_room_id_cache" not in self.data:
+                    self.data["gbf_room_id_cache"] = ExpiringDict(
+                        max_len=1, max_age_seconds=600
+                    )
+        except FileNotFoundError:
+            self.data = {
+                "gbf_room_num": 0,
+                "gbf_room_id_cache": ExpiringDict(max_len=1, max_age_seconds=600),
+            }
+
+        # register signal handler
+        # https://stackoverflow.com/questions/1112343/how-do-i-capture-sigint-in-python
+        signal.signal(signal.SIGINT, handler=self.save_data)
+
+    def save_data(self, sig, frame):
+        print("pressed Ctrl+C! dumping variables...")
+        try:
+            with open(self.serialized_data_filename, "wb") as f:
+                f.write(dill.dumps(self.data))
+        except FileNotFoundError:
+            os.makedirs(self.serialized_data_dir)
+        sys.exit(0)
 
     def insertall(self):
-        if self.check_onlilne():
+        if self.api_client.check_stream_online():
             print('channel is online! send chat: "!insertall"')
             talk(self.connection, self.channel, "!insertall")
         else:
@@ -114,7 +139,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         c.cap("REQ", ":twitch.tv/commands")
         c.join(self.channel)
         print("Joined " + self.channel)
-        # c.privmsg(self.channel, "Connected!")
 
     def on_pubmsg(self, c, e):
         arg = e.arguments[0]
@@ -129,8 +153,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             talk(c, self.channel, f"飛影飄泊 下午好~ KonCha")
         if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(arg):
             print(f"GBF room id detected: {arg}")
-            self.gbf_room_id_cache["user_id"] = arg
-            self.gbf_room_num += 1
+            self.data["gbf_room_id_cache"]["user_id"] = arg
+            self.data["gbf_room_num"] += 1
         if self.channel == "#wow_tomato" and arg == "!insertall":
             pass
             # talk(c, self.channel, f"@{user_id}, you have successfully queued. You are 1st...騙你的QAQ")
@@ -168,52 +192,14 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
     def do_command(self, user_id, cmd):
         c = self.connection
         if cmd == "code":
-            gbf_room_id = self.gbf_room_id_cache.get("user_id")
+            gbf_room_id = self.data["gbf_room_id_cache"].get("user_id")
             if gbf_room_id:
                 print(f"GBF room: {gbf_room_id}")
                 talk(
                     c,
                     self.channel,
-                    f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.gbf_room_num}間房 maoThinking",
+                    f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
-        # Poll the API to get current game.
-        # if cmd == "game":
-        #    url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
-        #    headers = {
-        #        "Client-ID": self.client_id,
-        #        "Accept": "application/vnd.twitchtv.v5+json",
-        #    }
-        #    r = requests.get(url, headers=headers).json()
-        #    c.privmsg(
-        #        self.channel, r["display_name"] + " is currently playing " + r["game"]
-        #    )
-
-        ## Poll the API the get the current status of the stream
-        # elif cmd == "title":
-        #    url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
-        #    headers = {
-        #        "Client-ID": self.client_id,
-        #        "Accept": "application/vnd.twitchtv.v5+json",
-        #    }
-        #    r = requests.get(url, headers=headers).json()
-        #    c.privmsg(
-        #        self.channel,
-        #        r["display_name"] + " channel title is currently " + r["status"],
-        #    )
-
-        ## Provide basic information to viewers for specific commands
-        # elif cmd == "raffle":
-        #    message = "This is an example bot, replace this text with your raffle text."
-        #    c.privmsg(self.channel, message)
-        # elif cmd == "schedule":
-        #    message = (
-        #        "This is an example bot, replace this text with your schedule text."
-        #    )
-        #    c.privmsg(self.channel, message)
-
-        ## The command was not recognized
-        # else:
-        #    c.privmsg(self.channel, "Did not understand command: " + cmd)
 
 
 def main():
@@ -225,21 +211,6 @@ def main():
     client_id = sys.argv[2]
     token = sys.argv[3]
     channel = sys.argv[4]
-
-    # import dill
-    # from expiringdict import ExpiringDict
-    # cache = ExpiringDict(max_len=100, max_age_seconds=10)
-    # cache['test'] = 1
-    # pickled_cache = dill.dumps(cache)
-    # unpickled_cache = dill.loads(pickled_cache)
-
-    # import signal
-    # import sys
-    #
-    # def signal_handler(sig, frame):
-    #     print("You pressed Ctrl+C!")
-    #     sys.exit(0)
-    # signal.signal(signal.SIGINT, signal_handler)
 
     bot = TwitchBot(username, client_id, token, channel)
     bot.start()
