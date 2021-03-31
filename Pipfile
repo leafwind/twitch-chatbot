@@ -9,6 +9,7 @@ irc = "*"
 expiringdict = "*"
 cachetools = "*"
 dill = "*"
+pyyaml ="*"
 
 [dev-packages]
 pytest = "*"

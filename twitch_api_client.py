@@ -1,6 +1,7 @@
+from typing import Dict
+
 import requests
 from cachetools import cached, TTLCache
-from typing import Dict
 
 
 class TwitchAPIClient:

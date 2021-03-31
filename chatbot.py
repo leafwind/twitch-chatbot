@@ -17,54 +17,13 @@ import irc.bot
 from expiringdict import ExpiringDict
 
 from twitch_api_client import TwitchAPIClient
+from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
 
 TREND_WORDS_SUBSTRING = ["LUL"]
 TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
-GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
 
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
-
-
-def cooldown():
-    if "_" not in GLOBAL_COOLDOWN:
-        GLOBAL_COOLDOWN["_"] = True
-        return False
-    else:
-        return True
-
-
-uma_call_cache = ExpiringDict(max_len=1, max_age_seconds=600)
-
-
-def uma_call(conn, channel, user_name):
-    if channel not in uma_call_cache:
-        talk(
-            conn,
-            channel,
-            f"@{user_name} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
-        )
-        uma_call_cache[channel] = True
-
-
-say_hi_cache = ExpiringDict(max_len=1, max_age_seconds=1800)
-
-
-def say_hi(conn, channel, user_name):
-    if channel not in say_hi_cache:
-        talk(
-            conn,
-            channel,
-            f"@{user_name} PokPikachu",
-        )
-        say_hi_cache[channel] = True
-
-
-def talk(conn, channel, msg):
-    if cooldown():
-        print("COOLDOWN...")
-        return
-    conn.privmsg(channel, msg)
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
@@ -92,7 +51,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
 
         # setup scheduler
-        self.reactor.scheduler.execute_every(5 * 60, self.insertall)
+        self.reactor.scheduler.execute_every(5 * 60, self.insert_all)
 
         # load data in disk
         try:
@@ -123,80 +82,81 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             os.makedirs(self.serialized_data_dir)
         sys.exit(0)
 
-    def insertall(self):
-        if self.api_client.check_stream_online():
-            print('channel is online! send chat: "!insertall"')
-            talk(self.connection, self.channel, "!insertall")
-        else:
-            print("channel is offline, skip sending !insertall")
-
-    def on_welcome(self, c, e):
-        print("Joining " + self.channel)
-
-        # You must request specific capabilities before you can use them
-        c.cap("REQ", ":twitch.tv/membership")
-        c.cap("REQ", ":twitch.tv/tags")
-        c.cap("REQ", ":twitch.tv/commands")
-        c.join(self.channel)
-        print("Joined " + self.channel)
-
-    def on_pubmsg(self, c, e):
-        arg = e.arguments[0]
-        user_id = e.source.split("!")[0]
-        user_name = e.tags[4]["value"]
-        is_mod = e.tags[8]["value"]
-        is_subscriber = e.tags[10]["value"]
-        timestamp_ms = e.tags[11]["value"]
-        # say_hi(c, self.channel, user_name)
-        print(f"{user_id:>20}: {arg}")
-        if user_id == "f1yshadow" and arg == "莉芙溫 下午好~ KonCha":
-            talk(c, self.channel, f"飛影飄泊 下午好~ KonCha")
-        if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(arg):
-            print(f"GBF room id detected: {arg}")
-            self.data["gbf_room_id_cache"]["user_id"] = arg
-            self.data["gbf_room_num"] += 1
-        if self.channel == "#wow_tomato" and arg == "!insertall":
-            pass
-            # talk(c, self.channel, f"@{user_id}, you have successfully queued. You are 1st...騙你的QAQ")
-            # talk(c, self.channel, f"@{user_id} successfully inserted 56 coins")
-            # talk(c, self.channel, f"Successfully added 5 points to {user_name}. Points: 5566")
-
-        # normalize chat. e.g. 77777777 -> 777
-        if len(arg) >= 3 and len(set(arg)) == 1:
-            arg = arg[:3]
+    def trend_talking(self, conn, msg):
+        # partial matching
         for word in TREND_WORDS_SUBSTRING:
-            if word in arg:
+            if word in msg:
                 if word not in self.push_trend_cache:
                     self.push_trend_cache[word] = 1
                 else:
                     self.push_trend_cache[word] += 1
                 print(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
                 if self.push_trend_cache[word] >= self.trend_threshold:
-                    talk(c, self.channel, word)
-        if arg in TREND_WORDS_MATCH:
-            if arg not in self.push_trend_cache:
-                self.push_trend_cache[arg] = 1
+                    talk(conn, self.channel, word)
+        # full matching
+        if msg in TREND_WORDS_MATCH:
+            if msg not in self.push_trend_cache:
+                self.push_trend_cache[msg] = 1
             else:
-                self.push_trend_cache[arg] += 1
-            print(f"[COUNTER] {arg}:{ self.push_trend_cache[arg]}")
-            if self.push_trend_cache[arg] >= self.trend_threshold:
-                talk(c, self.channel, arg)
-        if arg.startswith("!"):
-            cmd = arg.split(" ")[0][1:]
+                self.push_trend_cache[msg] += 1
+            print(f"[COUNTER] {msg}:{ self.push_trend_cache[msg]}")
+            if self.push_trend_cache[msg] >= self.trend_threshold:
+                talk(conn, self.channel, msg)
+
+    @filter_feature_toggle
+    def insert_all(self):
+        if self.channel != "#wow_tomato":
+            return
+        if self.api_client.check_stream_online():
+            print('channel is online! send chat: "!insertall"')
+            talk(self.connection, self.channel, "!insertall")
+        else:
+            print("channel is offline, skip sending !insertall")
+
+    def on_welcome(self, conn, e):
+        print("Joining " + self.channel)
+
+        # You must request specific capabilities before you can use them
+        conn.cap("REQ", ":twitch.tv/membership")
+        conn.cap("REQ", ":twitch.tv/tags")
+        conn.cap("REQ", ":twitch.tv/commands")
+        conn.join(self.channel)
+        print("Joined " + self.channel)
+
+    def on_pubmsg(self, conn, e):
+        msg = normalize_message(e.arguments[0])
+
+        user_id = e.source.split("!")[0]
+        user_name = e.tags[4]["value"]
+        is_mod = e.tags[8]["value"]
+        is_subscriber = e.tags[10]["value"]
+        timestamp_ms = e.tags[11]["value"]
+        say_hi(conn, self.channel, user_name)
+        print(f"{user_id:>20}: {msg}")
+        if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
+            talk(conn, self.channel, f"飛影飄泊 下午好~ KonCha")
+        if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
+            print(f"GBF room id detected: {msg}")
+            self.data["gbf_room_id_cache"]["user_id"] = msg
+            self.data["gbf_room_num"] += 1
+
+        self.trend_talking(conn, msg=msg)
+
+        if msg.startswith("!"):
+            cmd = msg.split(" ")[0][1:]
             print("Received command: " + cmd)
-            self.do_command(e, cmd)
-        if arg == "馬娘":
-            uma_call(c, self.channel, user_name)
+            self.do_command(cmd)
+        if msg == "馬娘":
+            uma_call(conn, self.channel, user_name)
         return
 
-    def do_command(self, user_id, cmd):
-        c = self.connection
+    def do_command(self, cmd):
         if cmd == "code":
             gbf_room_id = self.data["gbf_room_id_cache"].get("user_id")
             if gbf_room_id:
                 print(f"GBF room: {gbf_room_id}")
                 talk(
-                    c,
+                    self.connection,
                     self.channel,
                     f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
