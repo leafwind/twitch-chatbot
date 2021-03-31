@@ -45,40 +45,39 @@ def filter_feature_toggle(func):
             print(f"ERROR!! cannot found {func_name} in {FEATURE_TOGGLE_FILE}")
             return None
         try:
-            channel = kwargs["channel"]
+            channel_id = kwargs["channel_id"]
         except KeyError:
             try:
-                channel_arg_index = inspect.getfullargspec(func).args.index("channel")
-                channel = args[channel_arg_index]
+                channel_id_arg_index = inspect.getfullargspec(func).args.index("channel_id")
+                channel_id = args[channel_id_arg_index]
             except ValueError:
-                channel = args[0].channel
-        channel = channel[1:]
-        if channel in FEATURE_TOGGLE[func_name]:
+                channel_id = args[0].channel_id
+        if channel_id in FEATURE_TOGGLE[func_name]:
             return func(*args, **kwargs)
         else:
-            print(f"{channel} is not in {FEATURE_TOGGLE[func_name]}, skip")
+            print(f"{channel_id} is not in {FEATURE_TOGGLE[func_name]}, skip")
             return
 
     return wrapper
 
 
 @filter_feature_toggle
-def uma_call(conn, channel, user_name):
-    if channel not in uma_call_cache:
+def uma_call(conn, channel_id, user_name):
+    if channel_id not in uma_call_cache:
         talk(
             conn,
-            channel,
+            channel_id,
             f"@{user_name} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
         )
-        uma_call_cache[channel] = True
+        uma_call_cache[channel_id] = True
 
 
 @filter_feature_toggle
-def say_hi(conn, channel, user_name):
-    if channel not in say_hi_cache:
+def say_hi(conn, channel_id, user_name):
+    if channel_id not in say_hi_cache:
         talk(
             conn,
-            channel,
+            channel_id,
             f"@{user_name} PokPikachu",
         )
-        say_hi_cache[channel] = True
+        say_hi_cache[channel_id] = True
