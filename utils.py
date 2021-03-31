@@ -76,11 +76,13 @@ def uma_call(conn, channel_id, user_name):
 
 
 @filter_feature_toggle
-def say_hi(conn, channel_id, user_name):
-    if user_name not in say_hi_cache:
+def say_hi(conn, channel_id, user_id, user_name):
+    if user_id not in say_hi_cache:
         talk(
             conn,
             channel_id,
             f"@{user_name} 安安 PokPikachu",
         )
-        say_hi_cache[user_name] = True
+        say_hi_cache[user_id] = True
+    else:
+        print(f"already said hi to {user_id}, cool down..")

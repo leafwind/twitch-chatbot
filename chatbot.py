@@ -155,7 +155,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         # do not talk to myself
         if user_id != self.user_id:
-            say_hi(conn, self.channel_id, user_name)
+            say_hi(conn, self.channel_id, user_id, user_name)
         print(f"{user_id:>20}: {msg}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
             talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
