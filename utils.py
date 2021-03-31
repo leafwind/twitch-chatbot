@@ -11,7 +11,8 @@ GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
 
 uma_call_cache = ExpiringDict(max_len=1, max_age_seconds=600)
 
-say_hi_cache = ExpiringDict(max_len=1, max_age_seconds=1800)
+# remember 4096 users for say hi
+say_hi_cache = ExpiringDict(max_len=4096, max_age_seconds=1800)
 
 
 def normalize_message(text):
@@ -74,10 +75,10 @@ def uma_call(conn, channel_id, user_name):
 
 @filter_feature_toggle
 def say_hi(conn, channel_id, user_name):
-    if channel_id not in say_hi_cache:
+    if user_name not in say_hi_cache:
         talk(
             conn,
             channel_id,
-            f"@{user_name} PokPikachu",
+            f"@{user_name} 安安 PokPikachu",
         )
-        say_hi_cache[channel_id] = True
+        say_hi_cache[user_name] = True
