@@ -6,7 +6,7 @@ from expiringdict import ExpiringDict
 
 FEATURE_TOGGLE_FILE = "feature_toggle.yml"
 with open(FEATURE_TOGGLE_FILE, "r") as f:
-    toggle_dict = yaml.full_load(f)
+    FEATURE_TOGGLE = yaml.full_load(f)
 GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
 
 uma_call_cache = ExpiringDict(max_len=1, max_age_seconds=600)
@@ -41,7 +41,7 @@ def filter_feature_toggle(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         func_name = func.__name__
-        if func_name not in toggle_dict:
+        if func_name not in FEATURE_TOGGLE:
             print(f"ERROR!! cannot found {func_name} in {FEATURE_TOGGLE_FILE}")
             return None
         try:
@@ -53,10 +53,10 @@ def filter_feature_toggle(func):
             except ValueError:
                 channel = args[0].channel
         channel = channel[1:]
-        if channel in toggle_dict[func_name]:
+        if channel in FEATURE_TOGGLE[func_name]:
             return func(*args, **kwargs)
         else:
-            print(f"{channel} is not in {toggle_dict[func_name]}, skip")
+            print(f"{channel} is not in {FEATURE_TOGGLE[func_name]}, skip")
             return
 
     return wrapper

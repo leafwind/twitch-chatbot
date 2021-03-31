@@ -8,12 +8,14 @@ Licensed under the Apache License, Version 2.0 (the "License"). You may not use 
 or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 """
 import os
+import random
 import re
 import signal
 import sys
 
 import dill
 import irc.bot
+import yaml
 from expiringdict import ExpiringDict
 
 from twitch_api_client import TwitchAPIClient
@@ -21,25 +23,27 @@ from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_messa
 
 TREND_WORDS_SUBSTRING = ["LUL"]
 TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
-
+CHANNEL_CLIPS_FILE = "channel_clips.yml"
+with open(CHANNEL_CLIPS_FILE, "r") as f:
+    CHANNEL_CLIPS = yaml.full_load(f)
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, username, client_id, token, channel):
+    def __init__(self, username, client_id, token, channel_id):
         self.user_id = username
         self.client_id = client_id
         self.token = token.removeprefix("oauth:")
-        self.channel = "#" + channel.lower()
+        self.irc_channel = "#" + channel_id.lower()
+        self.channel_id = channel_id
         self.serialized_data_dir = "data"
         self.serialized_data_filename = os.path.join(
-            self.serialized_data_dir, f"{self.channel[1:]}.bin"
+            self.serialized_data_dir, f"{self.channel_id}.bin"
         )
         self.push_trend_cache = ExpiringDict(max_len=100, max_age_seconds=5)
 
-        self.api_client = TwitchAPIClient(channel, client_id)
-        self.channel_id = self.api_client.channel_id
+        self.api_client = TwitchAPIClient(self.channel_id, client_id)
 
         # Create IRC bot connection
         print(f"Connecting to {SERVER} on port {PORT}...")
@@ -53,6 +57,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         # setup scheduler
         self.reactor.scheduler.execute_every(5 * 60, self.insert_all)
+        self.reactor.scheduler.execute_every(60 * 60, self.share_clip)
 
         # load data in disk
         try:
@@ -93,7 +98,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.push_trend_cache[word] += 1
                 print(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
                 if self.push_trend_cache[word] >= self.trend_threshold:
-                    talk(conn, self.channel, word)
+                    talk(conn, self.irc_channel, word)
         # full matching
         if msg in TREND_WORDS_MATCH:
             if msg not in self.push_trend_cache:
@@ -102,27 +107,39 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 self.push_trend_cache[msg] += 1
             print(f"[COUNTER] {msg}:{ self.push_trend_cache[msg]}")
             if self.push_trend_cache[msg] >= self.trend_threshold:
-                talk(conn, self.channel, msg)
+                talk(conn, self.irc_channel, msg)
+
+    @filter_feature_toggle
+    def share_clip(self):
+        if self.channel_id not in CHANNEL_CLIPS:
+            return
+        if not self.api_client.check_stream_online():
+            print("channel is offline, skip share clip")
+            return
+        clip = random.choice(CHANNEL_CLIPS[self.channel_id])
+        talk(
+            self.connection,
+            self.irc_channel,
+            f"{clip['title']} {clip['url']}",
+        )
 
     @filter_feature_toggle
     def insert_all(self):
-        if self.channel != "#wow_tomato":
-            return
-        if self.api_client.check_stream_online():
-            print('channel is online! send chat: "!insertall"')
-            talk(self.connection, self.channel, "!insertall")
-        else:
+        if not self.api_client.check_stream_online():
             print("channel is offline, skip sending !insertall")
+            return
+        print('channel is online! send chat: "!insertall"')
+        talk(self.connection, self.irc_channel, "!insertall")
 
     def on_welcome(self, conn, e):
-        print("Joining " + self.channel)
+        print("Joining " + self.irc_channel)
 
         # You must request specific capabilities before you can use them
         conn.cap("REQ", ":twitch.tv/membership")
         conn.cap("REQ", ":twitch.tv/tags")
         conn.cap("REQ", ":twitch.tv/commands")
-        conn.join(self.channel)
-        print("Joined " + self.channel)
+        conn.join(self.irc_channel)
+        print("Joined " + self.irc_channel)
 
     def on_pubmsg(self, conn, e):
         msg = normalize_message(e.arguments[0])
@@ -135,10 +152,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         # do not talk to myself
         if user_id != self.user_id:
-            say_hi(conn, self.channel, user_name)
+            say_hi(conn, self.irc_channel, user_name)
         print(f"{user_id:>20}: {msg}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
-            talk(conn, self.channel, f"飛影飄泊 下午好~ KonCha")
+            talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
         if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
             print(f"GBF room id detected: {msg}")
             self.data["gbf_room_id_cache"]["user_id"] = msg
@@ -151,7 +168,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             print("Received command: " + cmd)
             self.do_command(cmd)
         if msg == "馬娘":
-            uma_call(conn, self.channel, user_name)
+            uma_call(conn, self.irc_channel, user_name)
         return
 
     def do_command(self, cmd):
@@ -161,7 +178,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 print(f"GBF room: {gbf_room_id}")
                 talk(
                     self.connection,
-                    self.channel,
+                    self.irc_channel,
                     f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
 
@@ -174,9 +191,9 @@ def main():
     username = sys.argv[1]
     client_id = sys.argv[2]
     token = sys.argv[3]
-    channel = sys.argv[4]
+    channel_id = sys.argv[4]
 
-    bot = TwitchBot(username, client_id, token, channel)
+    bot = TwitchBot(username, client_id, token, channel_id)
     bot.start()
 
 

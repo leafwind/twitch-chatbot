@@ -5,15 +5,15 @@ from cachetools import cached, TTLCache
 
 
 class TwitchAPIClient:
-    def __init__(self, channel, client_id):
-        self.api_url = "https://api.twitch.tv/kraken/users?login=" + channel
+    def __init__(self, channel_id, client_id):
+        self.api_url = "https://api.twitch.tv/kraken/users?login=" + channel_id
         self.api_headers = {
             "Client-ID": client_id,
             "Accept": "application/vnd.twitchtv.v5+json",
         }
-        # Get the channel id, we will need this for v5 API calls
+        # Get the channel serial number, we will need this for v5 API calls
         r = requests.get(self.api_url, headers=self.api_headers).json()
-        self.channel_id = r["users"][0]["_id"]
+        self.serial_number = r["users"][0]["_id"]
 
     @cached(cache=TTLCache(maxsize=1, ttl=60))
     def check_stream_online(self) -> bool:
@@ -21,7 +21,7 @@ class TwitchAPIClient:
         Poll the API to know if a channel is live or not
         :return:
         """
-        url = "https://api.twitch.tv/kraken/streams/" + self.channel_id
+        url = "https://api.twitch.tv/kraken/streams/" + self.serial_number
         r = requests.get(url, headers=self.api_headers).json()
         return True if r["stream"] else False
 
@@ -34,6 +34,6 @@ class TwitchAPIClient:
         r["game"]
         r["status"]
         """
-        url = "https://api.twitch.tv/kraken/channels/" + self.channel_id
+        url = "https://api.twitch.tv/kraken/channels/" + self.serial_number
         r = requests.get(url, headers=self.api_headers).json()
         return r
