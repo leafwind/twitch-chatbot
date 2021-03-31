@@ -1,5 +1,6 @@
 import functools
 import inspect
+import time
 
 import yaml
 from expiringdict import ExpiringDict
@@ -78,6 +79,7 @@ def uma_call(conn, irc_channel, channel_id, user_name):
 @filter_feature_toggle
 def say_hi(conn, irc_channel, channel_id, user_id, user_name):
     if user_id not in say_hi_cache:
+        time.sleep(2)
         talk(
             conn,
             irc_channel,
