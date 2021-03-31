@@ -65,22 +65,22 @@ def filter_feature_toggle(func):
 
 
 @filter_feature_toggle
-def uma_call(conn, channel_id, user_name):
+def uma_call(conn, irc_channel, channel_id, user_name):
     if channel_id not in uma_call_cache:
         talk(
             conn,
-            channel_id,
+            irc_channel,
             f"@{user_name} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
         )
         uma_call_cache[channel_id] = True
 
 
 @filter_feature_toggle
-def say_hi(conn, channel_id, user_id, user_name):
+def say_hi(conn, irc_channel, channel_id, user_id, user_name):
     if user_id not in say_hi_cache:
         talk(
             conn,
-            channel_id,
+            irc_channel,
             f"@{user_name} 安安 PokPikachu",
         )
         say_hi_cache[user_id] = True
