@@ -10,10 +10,12 @@ with open(FEATURE_TOGGLE_FILE, "r") as f:
     FEATURE_TOGGLE = yaml.full_load(f)
 GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
 
-uma_call_cache = ExpiringDict(max_len=1, max_age_seconds=600)
+UMA_CALL_CACHE_CHANNEL_ID = ExpiringDict(max_len=1, max_age_seconds=600)
 
+# remember 10 channels for say hi
+SAY_HI_CACHE_CHANNEL_ID = ExpiringDict(max_len=10, max_age_seconds=1800)
 # remember 4096 users for say hi
-say_hi_cache = ExpiringDict(max_len=4096, max_age_seconds=1800)
+SAY_HI_CACHE_USER = ExpiringDict(max_len=4096, max_age_seconds=86400)
 
 
 def normalize_message(text):
@@ -67,24 +69,28 @@ def filter_feature_toggle(func):
 
 @filter_feature_toggle
 def uma_call(conn, irc_channel, channel_id, user_name):
-    if channel_id not in uma_call_cache:
+    if channel_id not in UMA_CALL_CACHE_CHANNEL_ID:
         talk(
             conn,
             irc_channel,
             f"@{user_name} MrDestructoid SingsMic うまぴょい うまぴょい ShowOfHands",
         )
-        uma_call_cache[channel_id] = True
+        UMA_CALL_CACHE_CHANNEL_ID[channel_id] = True
 
 
 @filter_feature_toggle
 def say_hi(conn, irc_channel, channel_id, user_id, user_name):
-    if user_id not in say_hi_cache:
-        time.sleep(2)
-        talk(
-            conn,
-            irc_channel,
-            f"@{user_name} 安安 PokPikachu",
-        )
-        say_hi_cache[user_id] = True
-    else:
+    if channel_id in SAY_HI_CACHE_CHANNEL_ID:
+        print(f"already said hi in {channel_id}, cool down..")
+        return
+    if user_id in SAY_HI_CACHE_USER:
         print(f"already said hi to {user_id}, cool down..")
+        return
+    time.sleep(2)
+    talk(
+        conn,
+        irc_channel,
+        f"@{user_name} 安安 PokPikachu",
+    )
+    SAY_HI_CACHE_CHANNEL_ID[channel_id] = True
+    SAY_HI_CACHE_USER[user_id] = True
