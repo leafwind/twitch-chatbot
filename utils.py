@@ -81,7 +81,6 @@ def uma_call(conn, irc_channel, channel_id, user_name):
 @filter_feature_toggle
 def say_hi(conn, irc_channel, channel_id, user_id, user_name):
     if channel_id in SAY_HI_CACHE_CHANNEL_ID:
-        print(f"already said hi in {channel_id}, cool down..")
         return
     if user_id in SAY_HI_CACHE_USER:
         print(f"already said hi to {user_id}, cool down..")
