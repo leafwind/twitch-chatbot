@@ -74,10 +74,7 @@ def uma_call(conn, channel, user_name):
 
 
 @filter_feature_toggle
-def say_hi(conn, channel, user_name, bot_username):
-    # do not talk to myself
-    if bot_username == user_name:
-        return
+def say_hi(conn, channel, user_name):
     if channel not in say_hi_cache:
         talk(
             conn,

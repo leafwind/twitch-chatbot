@@ -28,7 +28,7 @@ PORT = 6667
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
     def __init__(self, username, client_id, token, channel):
-        self.username = username
+        self.user_id = username
         self.client_id = client_id
         self.token = token.removeprefix("oauth:")
         self.channel = "#" + channel.lower()
@@ -132,7 +132,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         is_mod = e.tags[8]["value"]
         is_subscriber = e.tags[10]["value"]
         timestamp_ms = e.tags[11]["value"]
-        say_hi(conn, self.channel, user_name, bot_username=self.username)
+
+        # do not talk to myself
+        if user_id != self.user_id:
+            say_hi(conn, self.channel, user_name)
         print(f"{user_id:>20}: {msg}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
             talk(conn, self.channel, f"飛影飄泊 下午好~ KonCha")
