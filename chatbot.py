@@ -57,8 +57,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
 
         # setup scheduler
-        self.reactor.scheduler.execute_every(5 * 60, self.insert_all)
-        self.reactor.scheduler.execute_every(60 * 60, self.share_clip)
+        # self.reactor.scheduler.execute_every(5 * 60, self.insert_all)
+        # self.reactor.scheduler.execute_every(60 * 60, self.share_clip)
 
         # load data in disk
         try:
