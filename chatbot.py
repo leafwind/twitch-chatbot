@@ -17,7 +17,7 @@ import sys
 import yaml
 from expiringdict import ExpiringDict
 import logging
-from twitch_api_client import TwitchAPIClient
+# from twitch_api_client import TwitchAPIClient
 from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
 
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +44,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         )
         self.push_trend_cache = ExpiringDict(max_len=100, max_age_seconds=5)
 
-        self.api_client = TwitchAPIClient(self.channel_id, client_id)
+        # self.api_client = TwitchAPIClient(self.channel_id, client_id)
 
         # Create IRC bot connection
         logging.info(f"Connecting to {SERVER} on port {PORT}...")
@@ -110,30 +110,30 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             if self.push_trend_cache[msg] >= self.trend_threshold:
                 talk(conn, self.irc_channel, msg)
 
-    @filter_feature_toggle
-    def share_clip(self):
-        if self.channel_id not in CHANNEL_CLIPS:
-            logging.info(
-                f"{self.channel_id} is not in {CHANNEL_CLIPS.keys()}, skip share clip"
-            )
-            return
-        if not self.api_client.check_stream_online():
-            logging.info("channel is offline, skip share clip")
-            return
-        clip = random.choice(CHANNEL_CLIPS[self.channel_id])
-        talk(
-            self.connection,
-            self.irc_channel,
-            f"{clip['title']} {clip['url']}",
-        )
+    # @filter_feature_toggle
+    # def share_clip(self):
+    #     if self.channel_id not in CHANNEL_CLIPS:
+    #         logging.info(
+    #             f"{self.channel_id} is not in {CHANNEL_CLIPS.keys()}, skip share clip"
+    #         )
+    #         return
+    #     if not self.api_client.check_stream_online():
+    #         logging.info("channel is offline, skip share clip")
+    #         return
+    #     clip = random.choice(CHANNEL_CLIPS[self.channel_id])
+    #     talk(
+    #         self.connection,
+    #         self.irc_channel,
+    #         f"{clip['title']} {clip['url']}",
+    #     )
 
-    @filter_feature_toggle
-    def insert_all(self):
-        if not self.api_client.check_stream_online():
-            logging.info("channel is offline, skip sending !insertall")
-            return
-        logging.info('channel is online! send chat: "!insertall"')
-        talk(self.connection, self.irc_channel, "!insertall")
+    # @filter_feature_toggle
+    # def insert_all(self):
+    #     if not self.api_client.check_stream_online():
+    #         logging.info("channel is offline, skip sending !insertall")
+    #         return
+    #     logging.info('channel is online! send chat: "!insertall"')
+    #     talk(self.connection, self.irc_channel, "!insertall")
 
     def on_welcome(self, conn, e):
         logging.info("Joining " + self.irc_channel)
