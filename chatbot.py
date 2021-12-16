@@ -7,19 +7,20 @@ Licensed under the Apache License, Version 2.0 (the "License"). You may not use 
 
 or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 """
+import dill
+import irc.bot
 import os
 import random
 import re
 import signal
 import sys
-
-import dill
-import irc.bot
 import yaml
 from expiringdict import ExpiringDict
-
+import logging
 from twitch_api_client import TwitchAPIClient
 from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
+
+logging.basicConfig(level=logging.INFO)
 
 TREND_WORDS_SUBSTRING = ["LUL"]
 TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
@@ -46,7 +47,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.api_client = TwitchAPIClient(self.channel_id, client_id)
 
         # Create IRC bot connection
-        print(f"Connecting to {SERVER} on port {PORT}...")
+        logging.info(f"Connecting to {SERVER} on port {PORT}...")
         irc.bot.SingleServerIRCBot.__init__(
             self, [(SERVER, PORT, "oauth:" + self.token)], username, username
         )
@@ -80,7 +81,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         signal.signal(signal.SIGINT, handler=self.save_data)
 
     def save_data(self, sig, frame):
-        print("pressed Ctrl+C! dumping variables...")
+        logging.info("pressed Ctrl+C! dumping variables...")
         try:
             with open(self.serialized_data_filename, "wb") as f:
                 f.write(dill.dumps(self.data))
@@ -96,7 +97,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.push_trend_cache[word] = 1
                 else:
                     self.push_trend_cache[word] += 1
-                print(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
+                logging.info(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
                 if self.push_trend_cache[word] >= self.trend_threshold:
                     talk(conn, self.irc_channel, word)
         # full matching
@@ -105,19 +106,19 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 self.push_trend_cache[msg] = 1
             else:
                 self.push_trend_cache[msg] += 1
-            print(f"[COUNTER] {msg}:{ self.push_trend_cache[msg]}")
+            logging.info(f"[COUNTER] {msg}:{ self.push_trend_cache[msg]}")
             if self.push_trend_cache[msg] >= self.trend_threshold:
                 talk(conn, self.irc_channel, msg)
 
     @filter_feature_toggle
     def share_clip(self):
         if self.channel_id not in CHANNEL_CLIPS:
-            print(
+            logging.info(
                 f"{self.channel_id} is not in {CHANNEL_CLIPS.keys()}, skip share clip"
             )
             return
         if not self.api_client.check_stream_online():
-            print("channel is offline, skip share clip")
+            logging.info("channel is offline, skip share clip")
             return
         clip = random.choice(CHANNEL_CLIPS[self.channel_id])
         talk(
@@ -129,20 +130,20 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
     @filter_feature_toggle
     def insert_all(self):
         if not self.api_client.check_stream_online():
-            print("channel is offline, skip sending !insertall")
+            logging.info("channel is offline, skip sending !insertall")
             return
-        print('channel is online! send chat: "!insertall"')
+        logging.info('channel is online! send chat: "!insertall"')
         talk(self.connection, self.irc_channel, "!insertall")
 
     def on_welcome(self, conn, e):
-        print("Joining " + self.irc_channel)
+        logging.info("Joining " + self.irc_channel)
 
         # You must request specific capabilities before you can use them
         conn.cap("REQ", ":twitch.tv/membership")
         conn.cap("REQ", ":twitch.tv/tags")
         conn.cap("REQ", ":twitch.tv/commands")
         conn.join(self.irc_channel)
-        print("Joined " + self.irc_channel)
+        logging.info("Joined " + self.irc_channel)
 
     def on_pubmsg(self, conn, e):
         msg = normalize_message(e.arguments[0])
@@ -156,11 +157,11 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
-        print(f"{user_id:>20}: {msg}")
+        logging.info(f"{user_id:>20}: {msg}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
             talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
         if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
-            print(f"GBF room id detected: {msg}")
+            logging.info(f"GBF room id detected: {msg}")
             self.data["gbf_room_id_cache"]["user_id"] = msg
             self.data["gbf_room_num"] += 1
 
@@ -168,7 +169,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         if msg.startswith("!"):
             cmd = msg.split(" ")[0][1:]
-            print("Received command: " + cmd)
+            logging.info("Received command: " + cmd)
             self.do_command(cmd)
         if msg == "馬娘":
             uma_call(conn, self.irc_channel, self.channel_id, user_name)
@@ -178,7 +179,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if cmd == "code":
             gbf_room_id = self.data["gbf_room_id_cache"].get("user_id")
             if gbf_room_id:
-                print(f"GBF room: {gbf_room_id}")
+                logging.info(f"GBF room: {gbf_room_id}")
                 talk(
                     self.connection,
                     self.irc_channel,
@@ -188,7 +189,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
 def main():
     if len(sys.argv) != 5:
-        print("Usage: twitchbot <username> <client id> <token> <channel>")
+        logging.info("Usage: twitchbot <username> <client id> <token> <channel>")
         sys.exit(1)
 
     username = sys.argv[1]

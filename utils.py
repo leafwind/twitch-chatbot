@@ -1,9 +1,11 @@
 import functools
 import inspect
+import logging
 import time
-
 import yaml
 from expiringdict import ExpiringDict
+
+logging.basicConfig(level=logging.INFO)
 
 FEATURE_TOGGLE_FILE = "feature_toggle.yml"
 with open(FEATURE_TOGGLE_FILE, "r") as f:
@@ -36,7 +38,7 @@ def cooldown():
 
 def talk(conn, channel, msg):
     if cooldown():
-        print("COOLDOWN...")
+        logging.info("COOLDOWN...")
         return
     conn.privmsg(channel, msg)
 
@@ -46,7 +48,7 @@ def filter_feature_toggle(func):
     def wrapper(*args, **kwargs):
         func_name = func.__name__
         if func_name not in FEATURE_TOGGLE:
-            print(f"ERROR!! cannot found {func_name} in {FEATURE_TOGGLE_FILE}")
+            logging.error(f"ERROR!! cannot found {func_name} in {FEATURE_TOGGLE_FILE}")
             return None
         try:
             channel_id = kwargs["channel_id"]
@@ -61,7 +63,7 @@ def filter_feature_toggle(func):
         if channel_id in FEATURE_TOGGLE[func_name]:
             return func(*args, **kwargs)
         else:
-            print(f"{channel_id} is not in {FEATURE_TOGGLE[func_name]}, skip")
+            logging.info(f"{channel_id} is not in {FEATURE_TOGGLE[func_name]}, skip")
             return
 
     return wrapper
@@ -83,7 +85,7 @@ def say_hi(conn, irc_channel, channel_id, user_id, user_name):
     if channel_id in SAY_HI_CACHE_CHANNEL_ID:
         return
     if user_id in SAY_HI_CACHE_USER:
-        print(f"already said hi to {user_id}, cool down..")
+        logging.info(f"already said hi to {user_id}, cool down..")
         return
     time.sleep(2)
     talk(
