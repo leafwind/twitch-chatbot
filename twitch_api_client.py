@@ -12,6 +12,7 @@ class TwitchAPIClient:
         }
         # Get the channel serial number, we will need this for v5 API calls
         r = requests.get(self.api_url, headers=self.api_headers).json()
+        logging.info(f"Connecting Twitch v5 API, get response: {r}")
         self.serial_number = r["users"][0]["_id"]
 
     @cached(cache=TTLCache(maxsize=1, ttl=60))
