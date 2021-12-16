@@ -1,6 +1,9 @@
+import logging
 import requests
 from cachetools import cached, TTLCache
 from typing import Dict
+
+logging.basicConfig(level=logging.INFO)
 
 
 class TwitchAPIClient:
