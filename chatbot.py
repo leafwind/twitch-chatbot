@@ -208,13 +208,13 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.irc_channel,
                     f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
-        if cmd == "開暈":
+        if cmd == "開船":
             if user_id != self.channel_id:
-                logging.inf(f"沒有權限")
+                logging.info(f"沒有權限")
                 return
             now = int(time.time())
             if now <= self.dizzy_ban_end_ts:
-                logging.inf(f"還在上一次暈船懲罰中喔")
+                logging.info(f"還在上一次暈船懲罰中喔")
                 return
             talk(
                 self.connection,
@@ -222,12 +222,15 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 f"在一分鐘內輸入 !暈 加入暈船行列，被選中的暈船仔會不斷在三秒後被消音，直到五分鐘結束為止",
             )
             self.dizzy_start_ts = now
+            logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
         if cmd == "暈":
             now = int(time.time())
             if now <= self.dizzy_start_ts + 60:
                 self.dizzy_users.append(user_id)
                 logging.info(f"{user_id} 已經上船")
                 talk(self.connection, self.irc_channel, f"{user_id} 已經上船")
+            else:
+                logging.info(f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + 60}")
 
 
 def main():
