@@ -126,7 +126,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if now > self.dizzy_start_ts + 60:
             self.ban_target = random.choice(self.dizzy_users)
             self.dizzy_ban_end_ts = now + 2 * 60
-            logging.info(f"/ban {ban_target}")
+            logging.info(f"/ban {self.ban_target}")
         if now > self.dizzy_ban_end_ts > 0:
             logging.info(f"/unban {self.ban_target}")
             self.dizzy_users = []
