@@ -32,6 +32,9 @@ with open(CHANNEL_CLIPS_FILE, "r") as f:
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
+ONBOARDING_PERIOD = 10
+BAN_PERIOD = 60
+
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
     def __init__(self, username, token, channel_id):
@@ -123,9 +126,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if self.dizzy_start_ts == 0:
             logging.info(f"暈船還沒開喔")
             return
-        if self.dizzy_start_ts + 60 < now <= self.dizzy_ban_end_ts:
+        if self.dizzy_start_ts + ONBOARDING_PERIOD < now <= self.dizzy_ban_end_ts:
             self.ban_target = random.choice(self.dizzy_users)
-            self.dizzy_ban_end_ts = now + 2 * 60
+            self.dizzy_ban_end_ts = now + BAN_PERIOD
         elif now > self.dizzy_ban_end_ts > 0:
             logging.info(f"/unban {self.ban_target}")
             self.dizzy_users = []
@@ -231,15 +234,16 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
         if cmd == "暈":
             now = int(time.time())
-            if now > self.dizzy_start_ts + 60:
-                logging.info(f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + 60}")
+            if now > self.dizzy_start_ts + ONBOARDING_PERIOD:
+                logging.info(
+                    f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + ONBOARDING_PERIOD}"
+                )
             if user_id in self.dizzy_users:
                 logging.info(f"{user_id} 已經在船上了！")
             else:
                 self.dizzy_users.append(user_id)
                 logging.info(f"乘客 {user_id} 成功上船！")
                 talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
-
 
 
 def main():
