@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 FEATURE_TOGGLE_FILE = "feature_toggle.yml"
 with open(FEATURE_TOGGLE_FILE, "r") as f:
     FEATURE_TOGGLE = yaml.full_load(f)
-GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=60)
+GLOBAL_COOLDOWN = ExpiringDict(max_len=1, max_age_seconds=1)
 
 UMA_CALL_CACHE_CHANNEL_ID = ExpiringDict(max_len=1, max_age_seconds=600)
 
