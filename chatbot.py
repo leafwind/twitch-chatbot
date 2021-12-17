@@ -9,14 +9,16 @@ or in the "license" file accompanying this file. This file is distributed on an 
 """
 import dill
 import irc.bot
+import logging
 import os
 import random
 import re
 import signal
 import sys
+import time
 import yaml
 from expiringdict import ExpiringDict
-import logging
+
 # from twitch_api_client import TwitchAPIClient
 from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
 
@@ -43,6 +45,11 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         )
         self.push_trend_cache = ExpiringDict(max_len=100, max_age_seconds=5)
 
+        self.dizzy_users = []
+        self.dizzy_start_ts = 0
+        self.dizzy_ban_end_ts = 0
+        self.ban_target = ""
+
         # self.api_client = TwitchAPIClient(self.channel_id, client_id)
 
         # Create IRC bot connection
@@ -56,6 +63,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.gbf_code_re = re.compile(r"[A-Z0-9]{8}")
 
         # setup scheduler
+        self.reactor.scheduler.execute_every(1, self.dizzy)
         # self.reactor.scheduler.execute_every(5 * 60, self.insert_all)
         # self.reactor.scheduler.execute_every(60 * 60, self.share_clip)
 
@@ -108,6 +116,22 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             logging.info(f"[COUNTER] {msg}:{ self.push_trend_cache[msg]}")
             if self.push_trend_cache[msg] >= self.trend_threshold:
                 talk(conn, self.irc_channel, msg)
+
+    @filter_feature_toggle
+    def dizzy(self):
+        now = int(time.time())
+        if self.dizzy_start_ts == 0:
+            logging.info(f"暈船還沒開喔")
+            return
+        if now > self.dizzy_start_ts + 60:
+            self.ban_target = random.choice(self.dizzy_users)
+            self.dizzy_ban_end_ts = now + 2 * 60
+            logging.info(f"/ban {ban_target}")
+        if now > self.dizzy_ban_end_ts:
+            logging.info(f"/unban {self.ban_target}")
+            self.dizzy_users = []
+            self.ban_target = ""
+            self.dizzy_start_ts = 0
 
     # @filter_feature_toggle
     # def share_clip(self):
@@ -184,6 +208,24 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.irc_channel,
                     f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
+        if cmd == "開暈":
+            if user_id != self.channel_id:
+                logging.inf(f"沒有權限")
+                return
+            now = int(time.time())
+            if now <= self.dizzy_ban_end_ts:
+                logging.inf(f"還在上一次暈船懲罰中喔")
+                return
+            talk(
+                self.connection,
+                self.irc_channel,
+                f"在一分鐘內輸入 !暈 加入暈船行列，被選中的暈船仔會不斷在三秒後被消音，直到五分鐘結束為止",
+            )
+            self.dizzy_start_ts = now
+        if cmd == "暈":
+            now = int(time.time())
+            if now <= self.dizzy_start_ts + 60:
+                self.dizzy_users.append(user_id)
 
 
 def main():
