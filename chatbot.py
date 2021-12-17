@@ -187,8 +187,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
 
 def main():
-    if len(sys.argv) != 5:
-        logging.info("Usage: twitchbot <username> <client id> <token> <channel>")
+    if len(sys.argv) != 4:
+        logging.info("Usage: twitchbot <username> <token> <channel>")
         sys.exit(1)
 
     username = sys.argv[1]
