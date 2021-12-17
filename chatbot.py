@@ -32,8 +32,8 @@ with open(CHANNEL_CLIPS_FILE, "r") as f:
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
-ONBOARDING_PERIOD = 10
-BAN_PERIOD = 60
+ONBOARDING_PERIOD = 60
+BAN_PERIOD = 120
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
@@ -124,7 +124,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
     def dizzy(self):
         now = int(time.time())
         if self.dizzy_start_ts == 0:
-            logging.info(f"暈船還沒開喔")
             return
         if self.dizzy_ban_end_ts == 0 and self.dizzy_start_ts + ONBOARDING_PERIOD < now:
             if not self.dizzy_users:
@@ -244,7 +243,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             talk(
                 self.connection,
                 self.irc_channel,
-                f"在一分鐘內輸入 !暈 加入暈船行列，被選中的暈船仔會不斷在三秒後被消音，直到五分鐘結束為止",
+                f"在一分鐘內輸入 !暈 加入暈船行列，被選中的暈船仔會不斷在三秒後被消音，直到兩分鐘結束為止",
             )
             self.dizzy_start_ts = now
             logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
