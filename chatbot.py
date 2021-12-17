@@ -226,12 +226,15 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
         if cmd == "暈":
             now = int(time.time())
-            if now <= self.dizzy_start_ts + 60:
-                self.dizzy_users.append(user_id)
-                logging.info(f"{user_id} 已經上船")
-                talk(self.connection, self.irc_channel, f"{user_id} 已經上船")
-            else:
+            if now > self.dizzy_start_ts + 60:
                 logging.info(f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + 60}")
+            if user_id in self.dizzy_users:
+                logging.info(f"{user_id} 已經在船上了！")
+            else:
+                self.dizzy_users.append(user_id)
+                logging.info(f"乘客 {user_id} 成功上船！")
+                talk(self.connection, self.irc_channel, f"{user_id} 已經上船")
+
 
 
 def main():
