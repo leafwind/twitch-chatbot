@@ -202,10 +202,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         logging.info(f"checking if {user_id} == {self.ban_target}...")
         if user_id == self.ban_target:
             time.sleep(3)
-            talk(conn, self.irc_channel, f"/ban {self.ban_target}")
-            logging.info(f"/ban {self.ban_target}")
-            talk(conn, self.irc_channel, f"/unban {self.ban_target}")
-            logging.info(f"/unban {self.ban_target}")
+            talk(conn, self.irc_channel, f"/timeout {self.ban_target} 1")
+            logging.info(f"/timeout {self.ban_target} 1")
+            # talk(conn, self.irc_channel, f"/unban {self.ban_target}")
+            # logging.info(f"/unban {self.ban_target}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
             talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
         if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
