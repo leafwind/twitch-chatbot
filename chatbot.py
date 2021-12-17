@@ -128,6 +128,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             return
         if self.dizzy_start_ts + ONBOARDING_PERIOD < now <= self.dizzy_ban_end_ts:
             self.ban_target = random.choice(self.dizzy_users)
+            logging.info(f"抓到了 @{self.ban_target} 你就是暈船仔！")
+            talk(self.connection, self.irc_channel, f"抓到了 @{self.ban_target} 你就是暈船仔！")
             self.dizzy_ban_end_ts = now + BAN_PERIOD
         elif now > self.dizzy_ban_end_ts > 0:
             logging.info(f"釋放 {self.ban_target}")
