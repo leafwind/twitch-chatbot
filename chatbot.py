@@ -193,12 +193,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if msg.startswith("!"):
             cmd = msg.split(" ")[0][1:]
             logging.info("Received command: " + cmd)
-            self.do_command(cmd)
+            self.do_command(cmd, user_id)
         if msg == "馬娘":
             uma_call(conn, self.irc_channel, self.channel_id, user_name)
         return
 
-    def do_command(self, cmd):
+    def do_command(self, cmd, user_id):
         if cmd == "code":
             gbf_room_id = self.data["gbf_room_id_cache"].get("user_id")
             if gbf_room_id:
