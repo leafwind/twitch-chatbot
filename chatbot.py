@@ -226,6 +226,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             now = int(time.time())
             if now <= self.dizzy_start_ts + 60:
                 self.dizzy_users.append(user_id)
+                logging.info(f"{user_id} 已經上船")
+                talk(self.connection, self.irc_channel, f"{user_id} 已經上船")
 
 
 def main():
