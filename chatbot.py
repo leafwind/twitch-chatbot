@@ -130,7 +130,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             self.ban_target = random.choice(self.dizzy_users)
             self.dizzy_ban_end_ts = now + BAN_PERIOD
         elif now > self.dizzy_ban_end_ts > 0:
-            logging.info(f"/unban {self.ban_target}")
+            logging.info(f"釋放 {self.ban_target}")
+            talk(self.connection, self.irc_channel, f"釋放 {self.ban_target}")
             self.dizzy_users = []
             self.ban_target = ""
             self.dizzy_start_ts = 0
