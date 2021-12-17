@@ -126,11 +126,14 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if self.dizzy_start_ts == 0:
             logging.info(f"暈船還沒開喔")
             return
-        if self.dizzy_start_ts + ONBOARDING_PERIOD < now <= self.dizzy_ban_end_ts:
-            self.ban_target = random.choice(self.dizzy_users)
-            logging.info(f"抓到了 @{self.ban_target} 你就是暈船仔！")
-            talk(self.connection, self.irc_channel, f"抓到了 @{self.ban_target} 你就是暈船仔！")
-            self.dizzy_ban_end_ts = now + BAN_PERIOD
+        if self.dizzy_start_ts + ONBOARDING_PERIOD < now:
+            if self.dizzy_ban_end_ts == 0:
+                self.ban_target = random.choice(self.dizzy_users)
+                logging.info(f"抓到了 @{self.ban_target} 你就是暈船仔！")
+                talk(self.connection, self.irc_channel, f"抓到了 @{self.ban_target} 你就是暈船仔！")
+                self.dizzy_ban_end_ts = now + BAN_PERIOD
+            elif now <= self.dizzy_ban_end_ts:
+                logging.info(f"暈船仔 {self.ban_target} 服役中")
         elif now > self.dizzy_ban_end_ts > 0:
             logging.info(f"釋放 {self.ban_target}")
             talk(self.connection, self.irc_channel, f"釋放 {self.ban_target}")
