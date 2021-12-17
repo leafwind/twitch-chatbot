@@ -123,11 +123,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if self.dizzy_start_ts == 0:
             logging.info(f"暈船還沒開喔")
             return
-        if now > self.dizzy_start_ts + 60:
+        if self.dizzy_start_ts + 60 < now <= self.dizzy_ban_end_ts:
             self.ban_target = random.choice(self.dizzy_users)
             self.dizzy_ban_end_ts = now + 2 * 60
-            logging.info(f"/ban {self.ban_target}")
-        if now > self.dizzy_ban_end_ts > 0:
+        elif now > self.dizzy_ban_end_ts > 0:
             logging.info(f"/unban {self.ban_target}")
             self.dizzy_users = []
             self.ban_target = ""
@@ -182,6 +181,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
         logging.info(f"{user_id:>20}: {msg}")
+        if user_id == self.ban_target:
+            time.sleep(3)
+            talk(conn, self.irc_channel, f"/ban {self.ban_target}")
+            logging.info(f"/ban {self.ban_target}")
+            talk(conn, self.irc_channel, f"/unban {self.ban_target}")
+            logging.info(f"/unban {self.ban_target}")
         if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
             talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
         if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
@@ -233,7 +238,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             else:
                 self.dizzy_users.append(user_id)
                 logging.info(f"乘客 {user_id} 成功上船！")
-                talk(self.connection, self.irc_channel, f"{user_id} 已經上船")
+                talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
 
 
 
