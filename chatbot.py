@@ -141,6 +141,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             self.ban_target = ""
             self.dizzy_start_ts = 0
             self.dizzy_ban_end_ts = 0
+        else:
+            logging(f"now: {now}, dizzy_start_ts: {self.dizzy_start_ts}, dizzy_ban_end_ts: {self.dizzy_ban_end_ts}")
 
     # @filter_feature_toggle
     # def share_clip(self):
