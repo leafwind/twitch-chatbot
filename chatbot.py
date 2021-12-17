@@ -185,6 +185,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
         logging.info(f"{user_id:>20}: {msg}")
+        logging(f"checking if {user_id} == {self.ban_target}...")
         if user_id == self.ban_target:
             time.sleep(3)
             talk(conn, self.irc_channel, f"/ban {self.ban_target}")
