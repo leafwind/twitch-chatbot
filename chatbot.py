@@ -22,7 +22,7 @@ from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_messa
 
 logging.basicConfig(level=logging.INFO)
 
-TREND_WORDS_SUBSTRING = ["LUL"]
+TREND_WORDS_SUBSTRING = ["LUL", "maoPartyparrot", "maoTorch"]
 TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
 CHANNEL_CLIPS_FILE = "channel_clips.yml"
 with open(CHANNEL_CLIPS_FILE, "r") as f:
@@ -32,9 +32,8 @@ PORT = 6667
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, username, client_id, token, channel_id):
+    def __init__(self, username, token, channel_id):
         self.user_id = username
-        self.client_id = client_id
         self.token = token.removeprefix("oauth:")
         self.irc_channel = "#" + channel_id.lower()
         self.channel_id = channel_id
@@ -193,11 +192,10 @@ def main():
         sys.exit(1)
 
     username = sys.argv[1]
-    client_id = sys.argv[2]
-    token = sys.argv[3]
-    channel_id = sys.argv[4]
+    token = sys.argv[2]
+    channel_id = sys.argv[3]
 
-    bot = TwitchBot(username, client_id, token, channel_id)
+    bot = TwitchBot(username, token, channel_id)
     bot.start()
 
 

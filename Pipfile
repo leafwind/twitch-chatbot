@@ -25,3 +25,4 @@ python_version = "3.9"
 [scripts]
 lint = "black ."
 test = "python -m pytest"
+get_twitch_app_token = "python get_twitch_app_token.py"
