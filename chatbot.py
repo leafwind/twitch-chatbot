@@ -243,11 +243,11 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             talk(
                 self.connection,
                 self.irc_channel,
-                f"在一分鐘內輸入 !暈 加入暈船行列，被選中的暈船仔會不斷在三秒後被消音，直到兩分鐘結束為止",
+                f"在一分鐘內輸入 !上船 讓溫泉蛋找出誰是暈船仔，被抓到的暈船仔會不斷在三秒後被消音，直到兩分鐘結束為止",
             )
             self.dizzy_start_ts = now
             logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
-        if cmd == "暈":
+        if cmd == "上船":
             now = int(time.time())
             if now > self.dizzy_start_ts + ONBOARDING_PERIOD:
                 logging.info(
