@@ -33,7 +33,7 @@ SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
 ONBOARDING_PERIOD = 60
-BAN_PERIOD = 120
+BAN_PERIOD = 300
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
@@ -136,19 +136,27 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             else:
                 self.ban_target = random.choice(self.dizzy_users)
                 logging.info(f"抓到了 @{self.ban_target} 你就是暈船仔！")
-                talk(self.connection, self.irc_channel, f"抓到了 @{self.ban_target} 你就是暈船仔！")
-                self.dizzy_ban_end_ts = self.dizzy_start_ts + ONBOARDING_PERIOD + BAN_PERIOD
+                talk(
+                    self.connection,
+                    self.irc_channel,
+                    f"抓到了 @{self.ban_target} 你就是暈船仔！我看你五分鐘內講的話都會神智不清亂告白，只好幫你湮滅證據了。",
+                )
+                self.dizzy_ban_end_ts = (
+                    self.dizzy_start_ts + ONBOARDING_PERIOD + BAN_PERIOD
+                )
         elif now <= self.dizzy_ban_end_ts:
-            logging.info(f"暈船仔 {self.ban_target} 服役中")
+            logging.info(f"暈船仔 {self.ban_target} 還在暈")
         elif now > self.dizzy_ban_end_ts > 0:
-            logging.info(f"釋放 {self.ban_target}")
-            talk(self.connection, self.irc_channel, f"釋放 {self.ban_target}")
+            logging.info(f"放 {self.ban_target} 下船")
+            talk(self.connection, self.irc_channel, f"放 {self.ban_target} 下船")
             self.dizzy_users = []
             self.ban_target = ""
             self.dizzy_start_ts = 0
             self.dizzy_ban_end_ts = 0
         else:
-            logging.info(f"now: {now}, dizzy_start_ts: {self.dizzy_start_ts}, dizzy_ban_end_ts: {self.dizzy_ban_end_ts}")
+            logging.info(
+                f"now: {now}, dizzy_start_ts: {self.dizzy_start_ts}, dizzy_ban_end_ts: {self.dizzy_ban_end_ts}"
+            )
 
     # @filter_feature_toggle
     # def share_clip(self):
@@ -232,7 +240,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.irc_channel,
                     f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
                 )
-        if cmd == "開船":
+        if cmd == "船來了":
             if user_id != self.channel_id:
                 logging.info(f"沒有權限")
                 return
@@ -243,22 +251,26 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             talk(
                 self.connection,
                 self.irc_channel,
-                f"在一分鐘內輸入 !上船 讓溫泉蛋找出誰是暈船仔，被抓到的暈船仔會不斷在三秒後被消音，直到兩分鐘結束為止",
+                f"在一分鐘內輸入 !上船 讓溫泉蛋找出誰是暈船仔，被抓到的暈船仔會不斷在三秒後被消音，直到五分鐘結束為止",
             )
             self.dizzy_start_ts = now
             logging.info(f"開始登記上船時間為 {self.dizzy_start_ts}")
         if cmd == "上船":
             now = int(time.time())
+            if self.dizzy_start_ts == 0:
+                logging.info(f"船還沒來喔！")
+                return
             if now > self.dizzy_start_ts + ONBOARDING_PERIOD:
                 logging.info(
                     f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + ONBOARDING_PERIOD}"
                 )
+                return
             if user_id in self.dizzy_users:
                 logging.info(f"{user_id} 已經在船上了！")
-            else:
-                self.dizzy_users.append(user_id)
-                logging.info(f"乘客 {user_id} 成功上船！")
-                talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
+                return
+            self.dizzy_users.append(user_id)
+            logging.info(f"乘客 {user_id} 成功上船！")
+            talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
 
 
 def main():
