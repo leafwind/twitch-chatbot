@@ -139,7 +139,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 talk(
                     self.connection,
                     self.irc_channel,
-                    f"抓到了 @{self.ban_target} 你就是暈船仔！我看你五分鐘內講的話都會神智不清亂告白，只好幫你湮滅證據了。",
+                    f"抓到了 @{self.ban_target} 你就是暈船仔！我看你五分鐘內都會神智不清亂告白，只好幫你湮滅證據了。",
                 )
                 self.dizzy_ban_end_ts = (
                     self.dizzy_start_ts + ONBOARDING_PERIOD + BAN_PERIOD
