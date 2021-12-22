@@ -24,10 +24,12 @@ from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_messa
 
 logging.basicConfig(level=logging.INFO)
 
-TREND_WORDS_SUBSTRING = ["LUL", "maoPartyparrot", "maoTorch"]
-TREND_WORDS_MATCH = ["0", "4", "555", "666", "777", "888", "999"]
-CHANNEL_CLIPS_FILE = "channel_clips.yml"
-with open(CHANNEL_CLIPS_FILE, "r") as f:
+with open("trend_words.yml") as f:
+    TREND_WORDS = yaml.full_load(f)
+    TREND_WORDS_SUBSTRING = TREND_WORDS["substring"]
+    TREND_WORDS_EXACT_MATCH = TREND_WORDS["exact_match"]
+
+with open("channel_clips.yml", "r") as f:
     CHANNEL_CLIPS = yaml.full_load(f)
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
@@ -111,7 +113,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 if self.push_trend_cache[word] >= self.trend_threshold:
                     talk(conn, self.irc_channel, word)
         # full matching
-        if msg in TREND_WORDS_MATCH:
+        if msg in TREND_WORDS_EXACT_MATCH:
             if msg not in self.push_trend_cache:
                 self.push_trend_cache[msg] = 1
             else:
