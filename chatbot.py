@@ -34,8 +34,12 @@ with open("channel_clips.yml", "r") as f:
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
+# !船來了 指令：ONBOARDING_PERIOD 為上船等待時間、BAN_PERIOD 為懲罰時間
 ONBOARDING_PERIOD = 60
 BAN_PERIOD = 300
+
+# Trending tokens will be expired in TREND_EXPIRE_SEC seconds
+TREND_EXPIRE_SEC = 15
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
@@ -48,7 +52,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.serialized_data_filename = os.path.join(
             self.serialized_data_dir, f"{self.channel_id}.bin"
         )
-        self.push_trend_cache = ExpiringDict(max_len=100, max_age_seconds=5)
+        self.push_trend_cache = ExpiringDict(
+            max_len=100, max_age_seconds=TREND_EXPIRE_SEC
+        )
 
         self.dizzy_users = []
         self.dizzy_start_ts = 0
