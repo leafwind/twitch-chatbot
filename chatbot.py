@@ -118,6 +118,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 logging.info(f"[COUNTER] {word}:{ self.push_trend_cache[word]}")
                 if self.push_trend_cache[word] >= self.trend_threshold:
                     talk(conn, self.irc_channel, word)
+                    self.push_trend_cache[word] = -10
         # full matching
         if msg in TREND_WORDS_EXACT_MATCH:
             if msg not in self.push_trend_cache:
