@@ -146,8 +146,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             else:
                 n_dizzy_users = (
                     1
-                    if len(self.dizzy_users) < 5
-                    else math.ceil(len(self.dizzy_users) / 5)
+                    if len(self.dizzy_users) < 20
+                    else math.ceil(len(self.dizzy_users) * 0.05)
                 )
                 self.ban_targets = random.sample(self.dizzy_users, n_dizzy_users)
                 ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
