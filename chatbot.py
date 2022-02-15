@@ -10,6 +10,7 @@ or in the "license" file accompanying this file. This file is distributed on an 
 import dill
 import irc.bot
 import logging
+import math
 import os
 import random
 import re
