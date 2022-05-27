@@ -223,8 +223,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
-        logging.info(f"{user_id:>20}: {msg}")
-        logging.info(f"checking if {user_id} in {self.ban_targets}...")
+        logging.info(f"{self.channel_id:>14} | {user_id:>14}: {msg}")
         if user_id in self.ban_targets:
             time.sleep(3)
             talk(conn, self.irc_channel, f"/timeout {user_id} 1")
@@ -278,7 +277,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 return
             if now > self.dizzy_start_ts + ONBOARDING_PERIOD:
                 logging.info(
-                    f"現在是 {now} 已經超過開船時間 {self.dizzy_start_ts + ONBOARDING_PERIOD}"
+                    f"現在是 {now} 已經超過上船時間 {self.dizzy_start_ts + ONBOARDING_PERIOD}"
                 )
                 return
             if user_id in self.dizzy_users:
@@ -289,17 +288,25 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
 
 
-def main():
-    if len(sys.argv) != 4:
-        logging.info("Usage: twitchbot <username> <token> <channel>")
-        sys.exit(1)
-
+def spawn_bot(channel_id):
     username = sys.argv[1]
     token = sys.argv[2]
-    channel_id = sys.argv[3]
 
     bot = TwitchBot(username, token, channel_id)
     bot.start()
+
+
+def main():
+    if len(sys.argv) != 3:
+        logging.info("Usage: twitchbot <username> <token>")
+        sys.exit(1)
+
+    import multiprocessing
+    import time
+    for channel_id in ["leafwind", "yb57152", "wen620", "s17116222", "kspksp", "mrlo_tw", "dreamer051"]:
+        p = multiprocessing.Process(target=spawn_bot, args=(channel_id,))
+        p.start()
+        time.sleep(5)
 
 
 if __name__ == "__main__":

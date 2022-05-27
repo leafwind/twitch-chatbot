@@ -63,7 +63,6 @@ def filter_feature_toggle(func):
         if channel_id in FEATURE_TOGGLE[func_name]:
             return func(*args, **kwargs)
         else:
-            logging.info(f"{channel_id} is not in {FEATURE_TOGGLE[func_name]}, skip")
             return
 
     return wrapper
