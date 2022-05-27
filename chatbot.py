@@ -11,11 +11,13 @@ import dill
 import irc.bot
 import logging
 import math
+import multiprocessing
 import os
 import random
 import re
 import signal
 import sys
+import time
 import time
 import yaml
 from expiringdict import ExpiringDict
@@ -301,9 +303,15 @@ def main():
         logging.info("Usage: twitchbot <username> <token>")
         sys.exit(1)
 
-    import multiprocessing
-    import time
-    for channel_id in ["leafwind", "yb57152", "wen620", "s17116222", "kspksp", "mrlo_tw", "dreamer051"]:
+    for channel_id in [
+        "leafwind",
+        "yb57152",
+        "wen620",
+        "s17116222",
+        "kspksp",
+        "mrlo_tw",
+        "dreamer051",
+    ]:
         p = multiprocessing.Process(target=spawn_bot, args=(channel_id,))
         p.start()
         time.sleep(5)
