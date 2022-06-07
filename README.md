@@ -10,12 +10,12 @@ $ pipenv install --dev
 ## Usage
 To run the chatbot, you will need to provide an OAuth access token with the chat_login scope.  You can reference an authentication sample to accomplish this, or simply use the [Twitch Chat OAuth Password Generator](http://twitchapps.com/tmi/).
 
+The `run.sh` contains the following shell to run the process:
 ```sh
-$ pipenv run python chatbot.py <username> <token> <channel>
+pipenv run python chatbot.py <username> <token>
 ```
 * Username - The username of the chatbot
-* Token - Your OAuth Token
-* Channel - The channel your bot will connect to
+* Token - Your OAuth Token, load from `.env` file
 
 
 ### Get IRC oauth token (for IRC chat and commands)
