@@ -22,6 +22,8 @@ import irc.bot
 import yaml
 from expiringdict import ExpiringDict
 
+from logger import set_logger
+
 # from twitch_api_client import TwitchAPIClient
 from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
 
@@ -304,6 +306,7 @@ def spawn_bot(channel_id):
 
 
 def main():
+    set_logger()
     if len(sys.argv) != 3:
         logging.info("Usage: twitchbot <username> <token>")
         sys.exit(1)
