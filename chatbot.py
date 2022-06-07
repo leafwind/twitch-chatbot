@@ -37,8 +37,8 @@ with open("channel_clips.yml", "r") as f:
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
 
-# !船來了 指令：ONBOARDING_PERIOD 為上船等待時間、BAN_PERIOD 為懲罰時間
-ONBOARDING_PERIOD = 60
+# !船來了 指令：BOARDING_PERIOD 為上船等待時間、BAN_PERIOD 為懲罰時間
+BOARDING_PERIOD = 60
 BAN_PERIOD = 300
 
 # Trending tokens will be expired in TREND_EXPIRE_SEC seconds
@@ -137,7 +137,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         now = int(time.time())
         if self.dizzy_start_ts == 0:
             return
-        if self.dizzy_ban_end_ts == 0 and self.dizzy_start_ts + ONBOARDING_PERIOD < now:
+        if self.dizzy_ban_end_ts == 0 and self.dizzy_start_ts + BOARDING_PERIOD < now:
             if not self.dizzy_users:
                 logging.info(f"沒人上船，開船失敗！")
                 talk(self.connection, self.irc_channel, f"沒人上船，開船失敗！")
@@ -160,7 +160,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     f"抓到了 {ban_targets_str} 你就是暈船仔！我看你五分鐘內都會神智不清亂告白，只好幫你湮滅證據了。",
                 )
                 self.dizzy_ban_end_ts = (
-                    self.dizzy_start_ts + ONBOARDING_PERIOD + BAN_PERIOD
+                        self.dizzy_start_ts + BOARDING_PERIOD + BAN_PERIOD
                 )
         elif now <= self.dizzy_ban_end_ts:
             ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
@@ -277,9 +277,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             if self.dizzy_start_ts == 0:
                 logging.info(f"船還沒來喔！")
                 return
-            if now > self.dizzy_start_ts + ONBOARDING_PERIOD:
+            if now > self.dizzy_start_ts + BOARDING_PERIOD:
                 logging.info(
-                    f"現在是 {now} 已經超過上船時間 {self.dizzy_start_ts + ONBOARDING_PERIOD}"
+                    f"現在是 {now} 已經超過上船時間 {self.dizzy_start_ts + BOARDING_PERIOD}"
                 )
                 return
             if user_id in self.dizzy_users:
