@@ -1,7 +1,4 @@
 import logging
-import os
-import sys
-from datetime import datetime
 
 
 def set_logger(log_level=20):
@@ -9,9 +6,10 @@ def set_logger(log_level=20):
     my_format = (
         "[%(levelname).4s] %(asctime)s | %(name)s | " "%(lineno)3s | %(message)s"
     )
-    date_format = "%Y-%m-%d %H:%M:%S"
+    date_format = "%m-%d %H:%M:%S"
     logging.basicConfig(
         level=log_level,
         format=my_format,
         datefmt=date_format,
+        force=True,
     )

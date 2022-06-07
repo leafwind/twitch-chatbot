@@ -233,7 +233,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
-        logger.info(f"{self.channel_id:>14} | {user_id:>14}: {msg}")
+        logger.info(f"{self.channel_id} | {user_id:>14}: {msg}")
         if user_id in self.ban_targets:
             time.sleep(3)
             talk(conn, self.irc_channel, f"/timeout {user_id} 1")
@@ -322,7 +322,6 @@ def main():
     ]:
         p = multiprocessing.Process(target=spawn_bot, args=(channel_id,))
         p.start()
-        time.sleep(5)
 
 
 if __name__ == "__main__":
