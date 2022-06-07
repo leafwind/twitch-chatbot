@@ -27,12 +27,16 @@ from logger import set_logger
 # from twitch_api_client import TwitchAPIClient
 from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
 
-with open("trend_words.yml") as f:
+
+with open("config/target_channels.yml") as f:
+    TARGET_CHANNELS = yaml.full_load(f)
+
+with open("config/trend_words.yml") as f:
     TREND_WORDS = yaml.full_load(f)
     TREND_WORDS_SUBSTRING = TREND_WORDS["substring"]
     TREND_WORDS_EXACT_MATCH = TREND_WORDS["exact_match"]
 
-with open("channel_clips.yml", "r") as f:
+with open("config/channel_clips.yml", "r") as f:
     CHANNEL_CLIPS = yaml.full_load(f)
 SERVER = "irc.chat.twitch.tv"
 PORT = 6667
@@ -296,15 +300,7 @@ def main():
         logger.info("Usage: chatbot <username> <token>")
         sys.exit(1)
 
-    for channel_id in [
-        "leafwind",
-        "yb57152",
-        "wen620",
-        "s17116222",
-        "kspksp",
-        "mrlo_tw",
-        "dreamer051",
-    ]:
+    for channel_id in TARGET_CHANNELS:
         p = multiprocessing.Process(target=spawn_bot, args=(channel_id,))
         p.start()
 
