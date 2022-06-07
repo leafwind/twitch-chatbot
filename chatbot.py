@@ -67,7 +67,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # self.api_client = TwitchAPIClient(self.channel_id, client_id)
 
         # Create IRC bot connection
-        logging.info(f"Connecting to {SERVER} on port {PORT}...")
+        logging.info(f"Connecting to {self.irc_channel}...")
         irc.bot.SingleServerIRCBot.__init__(
             self, [(SERVER, PORT, "oauth:" + self.token)], username, username
         )
