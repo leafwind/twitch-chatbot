@@ -9,8 +9,8 @@ WorkingDirectory=/home/bot/git/twitch-chatbot
 ExecStart=bash /home/bot/git/twitch-chatbot/run.sh
 Restart=always
 RestartSec=3
-StandardOutput=file:/var/log/twitch-chatbot.out
-StandardError=file:/var/log/twitch-chatbot.err
+StandardOutput=append:/var/log/twitch-chatbot.out
+StandardError=append:/var/log/twitch-chatbot.err
 
 [Install]
 WantedBy=multi-user.target
