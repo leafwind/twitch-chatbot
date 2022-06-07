@@ -90,33 +90,33 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # self.reactor.scheduler.execute_every(60 * 60, self.share_clip)
 
         # load data in disk
-        try:
-            with open(self.serialized_data_filename, "rb") as f:
-                self.data = dill.loads(f.read())
-                if "gbf_room_num" not in self.data:
-                    self.data["gbf_room_num"] = 0
-                if "gbf_room_id_cache" not in self.data:
-                    self.data["gbf_room_id_cache"] = ExpiringDict(
-                        max_len=1, max_age_seconds=600
-                    )
-        except FileNotFoundError:
-            self.data = {
-                "gbf_room_num": 0,
-                "gbf_room_id_cache": ExpiringDict(max_len=1, max_age_seconds=600),
-            }
+        # try:
+        #     with open(self.serialized_data_filename, "rb") as f:
+        #         self.data = dill.loads(f.read())
+        #         if "gbf_room_num" not in self.data:
+        #             self.data["gbf_room_num"] = 0
+        #         if "gbf_room_id_cache" not in self.data:
+        #             self.data["gbf_room_id_cache"] = ExpiringDict(
+        #                 max_len=1, max_age_seconds=600
+        #             )
+        # except FileNotFoundError:
+        #     self.data = {
+        #         "gbf_room_num": 0,
+        #         "gbf_room_id_cache": ExpiringDict(max_len=1, max_age_seconds=600),
+        #     }
 
         # register signal handler
         # https://stackoverflow.com/questions/1112343/how-do-i-capture-sigint-in-python
-        signal.signal(signal.SIGINT, handler=self.save_data)
+        # signal.signal(signal.SIGINT, handler=self.save_data)
 
-    def save_data(self, sig, frame):
-        logger.info("pressed Ctrl+C! dumping variables...")
-        try:
-            with open(self.serialized_data_filename, "wb") as f:
-                f.write(dill.dumps(self.data))
-        except FileNotFoundError:
-            os.makedirs(self.serialized_data_dir)
-        sys.exit(0)
+    # def save_data(self, sig, frame):
+    #     logger.info("pressed Ctrl+C! dumping variables...")
+    #     try:
+    #         with open(self.serialized_data_filename, "wb") as f:
+    #             f.write(dill.dumps(self.data))
+    #     except FileNotFoundError:
+    #         os.makedirs(self.serialized_data_dir)
+    #     sys.exit(0)
 
     def trend_talking(self, conn, msg):
         # partial matching
@@ -238,12 +238,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             time.sleep(3)
             talk(conn, self.irc_channel, f"/timeout {user_id} 1")
             logger.info(f"/timeout {user_id} 1")
-        if user_id == "f1yshadow" and msg == "莉芙溫 下午好~ KonCha":
-            talk(conn, self.irc_channel, f"飛影飄泊 下午好~ KonCha")
-        if user_id == "harnaisxsumire666" and self.gbf_code_re.fullmatch(msg):
-            logger.info(f"GBF room id detected: {msg}")
-            self.data["gbf_room_id_cache"]["user_id"] = msg
-            self.data["gbf_room_num"] += 1
 
         self.trend_talking(conn, msg=msg)
 
@@ -256,15 +250,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         return
 
     def do_command(self, cmd, user_id):
-        if cmd == "code":
-            gbf_room_id = self.data["gbf_room_id_cache"].get("user_id")
-            if gbf_room_id:
-                logger.info(f"GBF room: {gbf_room_id}")
-                talk(
-                    self.connection,
-                    self.irc_channel,
-                    f"ㄇㄨ的房號 {gbf_room_id} 這是開台第{self.data['gbf_room_num']}間房 maoThinking",
-                )
         if cmd == "船來了":
             if user_id != self.channel_id:
                 logger.info(f"沒有權限")
@@ -308,7 +293,7 @@ def spawn_bot(channel_id):
 
 def main():
     if len(sys.argv) != 3:
-        logger.info("Usage: twitchbot <username> <token>")
+        logger.info("Usage: chatbot <username> <token>")
         sys.exit(1)
 
     for channel_id in [
