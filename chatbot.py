@@ -69,7 +69,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # Create IRC bot connection
         logging.info(f"Connecting to {self.irc_channel}...")
         irc.bot.SingleServerIRCBot.__init__(
-            self, [(SERVER, PORT, "oauth:" + self.token)], username, username
+            self,
+            [(SERVER, PORT, "oauth:" + self.token)],
+            username,
+            username,
+            # the default backoff config is min_interval=60, max_interval=300, which is too long.
+            recon=irc.bot.ExponentialBackoff(min_interval=3, max_interval=10),
         )
         # TODO: dynamically determine
         self.trend_threshold = 3
@@ -160,7 +165,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     f"抓到了 {ban_targets_str} 你就是暈船仔！我看你五分鐘內都會神智不清亂告白，只好幫你湮滅證據了。",
                 )
                 self.dizzy_ban_end_ts = (
-                        self.dizzy_start_ts + BOARDING_PERIOD + BAN_PERIOD
+                    self.dizzy_start_ts + BOARDING_PERIOD + BAN_PERIOD
                 )
         elif now <= self.dizzy_ban_end_ts:
             ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
