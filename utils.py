@@ -36,6 +36,10 @@ def cooldown():
         return True
 
 
+def whisper(conn, channel, user_id, msg):
+    conn.privmsg(channel, f"/w {user_id} {msg}")
+
+
 def send(conn, channel, msg):
     conn.privmsg(channel, msg)
 

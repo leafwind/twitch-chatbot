@@ -30,6 +30,7 @@ from utils import (
     uma_call,
     talk,
     send,
+    whisper,
     say_hi,
     normalize_duplicated_str,
 )
@@ -243,7 +244,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         # clock in
         if msg == "CLOCKIN":
-            send(conn, user_id, "已經簽到！")
+            logger.info(f"@{user_id} 已經簽到！")
+            whisper(conn, self.irc_channel, user_id, f"已經簽到！")
 
         # do not talk to myself
         if user_id != self.user_id:
