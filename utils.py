@@ -20,8 +20,8 @@ SAY_HI_CACHE_CHANNEL_ID = ExpiringDict(max_len=10, max_age_seconds=1800)
 SAY_HI_CACHE_USER = ExpiringDict(max_len=4096, max_age_seconds=86400)
 
 
-def normalize_message(text):
-    # normalize chat. e.g. 77777777 -> 777
+def normalize_duplicated_str(text):
+    # normalize string. e.g. 77777777 -> 777
     if len(text) >= 3 and len(set(text)) == 1:
         return text[:3]
     else:
@@ -34,6 +34,10 @@ def cooldown():
         return False
     else:
         return True
+
+
+def send(conn, channel, msg):
+    conn.privmsg(channel, msg)
 
 
 def talk(conn, channel, msg):

@@ -25,7 +25,14 @@ from expiringdict import ExpiringDict
 from logger import set_logger
 
 # from twitch_api_client import TwitchAPIClient
-from utils import filter_feature_toggle, uma_call, talk, say_hi, normalize_message
+from utils import (
+    filter_feature_toggle,
+    uma_call,
+    talk,
+    send,
+    say_hi,
+    normalize_duplicated_str,
+)
 
 
 with open("config/target_channels.yml") as f:
@@ -152,7 +159,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if self.dizzy_ban_end_ts == 0 and self.dizzy_start_ts + BOARDING_PERIOD < now:
             if not self.dizzy_users:
                 logger.info(f"沒人上船，開船失敗！")
-                talk(self.connection, self.irc_channel, f"沒人上船，開船失敗！")
+                send(self.connection, self.irc_channel, f"沒人上船，開船失敗！")
                 self.dizzy_users = []
                 self.ban_targets = []
                 self.dizzy_start_ts = 0
@@ -166,7 +173,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 self.ban_targets = random.sample(self.dizzy_users, n_dizzy_users)
                 ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
                 logger.info(f"抓到了 {ban_targets_str} 你就是暈船仔！")
-                talk(
+                send(
                     self.connection,
                     self.irc_channel,
                     f"抓到了 {ban_targets_str} 你就是暈船仔！我看你五分鐘內都會神智不清亂告白，只好幫你湮滅證據了。",
@@ -180,7 +187,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         elif now > self.dizzy_ban_end_ts > 0:
             ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
             logger.info(f"放 {ban_targets_str} 下船")
-            talk(self.connection, self.irc_channel, f"放 {ban_targets_str} 下船")
+            send(self.connection, self.irc_channel, f"放 {ban_targets_str} 下船")
             self.dizzy_users = []
             self.ban_targets = []
             self.dizzy_start_ts = 0
@@ -226,7 +233,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         logger.info("Joined " + self.irc_channel)
 
     def on_pubmsg(self, conn, e):
-        msg = normalize_message(e.arguments[0])
+        msg = normalize_duplicated_str(e.arguments[0])
 
         user_id = e.source.split("!")[0]
         user_name = e.tags[4]["value"]
@@ -234,13 +241,17 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         is_subscriber = e.tags[10]["value"]
         timestamp_ms = e.tags[11]["value"]
 
+        # clock in
+        if msg == "CLOCKIN":
+            send(conn, user_id, "已經簽到！")
+
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
         logger.info(f"{self.channel_id} | {user_id:>14}: {msg}")
         if user_id in self.ban_targets:
             time.sleep(3)
-            talk(conn, self.irc_channel, f"/timeout {user_id} 1")
+            send(conn, self.irc_channel, f"/timeout {user_id} 1")
             logger.info(f"/timeout {user_id} 1")
 
         self.trend_talking(conn, msg=msg)
@@ -262,7 +273,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             if now <= self.dizzy_ban_end_ts:
                 logger.info(f"還在上一次暈船懲罰中喔")
                 return
-            talk(
+            send(
                 self.connection,
                 self.irc_channel,
                 f"在一分鐘內輸入 !上船 讓溫泉蛋找出誰是暈船仔，被抓到的暈船仔會不斷在三秒後被消音，直到五分鐘結束為止",
@@ -284,7 +295,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 return
             self.dizzy_users.append(user_id)
             logger.info(f"乘客 {user_id} 成功上船！")
-            talk(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
+            send(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
 
 
 def spawn_bot(channel_id):
