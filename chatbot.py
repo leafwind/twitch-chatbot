@@ -300,8 +300,8 @@ def main():
         logger.info("Usage: chatbot <username> <token>")
         sys.exit(1)
 
-    for channel_id in TARGET_CHANNELS:
-        p = multiprocessing.Process(target=spawn_bot, args=(channel_id,))
+    for channel in TARGET_CHANNELS:
+        p = multiprocessing.Process(target=spawn_bot, args=(channel["id"],))
         p.start()
 
 
