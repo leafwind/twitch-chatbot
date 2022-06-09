@@ -21,7 +21,6 @@ import dill
 import irc.bot
 import yaml
 from expiringdict import ExpiringDict
-import mysql.connector
 
 from dotenv import load_dotenv
 
@@ -37,6 +36,7 @@ from utils import (
     say_hi,
     normalize_duplicated_str,
 )
+from feature import clock_in
 
 load_dotenv()
 
@@ -253,11 +253,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         is_subscriber = e.tags[10]["value"]
         timestamp_ms = e.tags[11]["value"]
 
-        # clock in
-        if msg == "CLOCKIN":
-            logger.info(f"@{user_id} 已經簽到！")
-            whisper(conn, self.irc_channel, user_id, f"已經簽到！")
-
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
@@ -310,26 +305,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             logger.info(f"乘客 {user_id} 成功上船！")
             send(self.connection, self.irc_channel, f"乘客 {user_name}({user_id}) 成功上船！")
         if cmd == "簽到":
-            config = {
-                "user": os.environ.get("MYSQL_USER"),
-                "password": os.environ.get("MYSQL_PASSWORD"),
-            }
-            cnx = mysql.connector.connect(**config)
-            cur = cnx.cursor(buffered=True)
-            cur.execute(
-                f"INSERT INTO twitch.clock_in (channel, user_id) VALUES (%s, %s)",
-                (self.channel_id, user_id),
-            )
-            cur.close()
-            cnx.commit()
-            cnx.close()
-            whisper(
-                self.connection,
-                self.irc_channel,
-                user_id,
-                f"{user_name} 簽到 {self.channel_id} 成功",
-            )
-            logger.info(f"{user_id} 簽到 {self.channel_id} 成功")
+            clock_in.clock_in(self, user_id, user_name)
 
 
 def spawn_bot(channel_id):
