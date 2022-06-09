@@ -323,6 +323,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             cur.close()
             cnx.commit()
             cnx.close()
+            whisper(
+                self.connection,
+                self.irc_channel,
+                user_id,
+                f"{user_name} 簽到 {self.channel_id} 成功",
+            )
             logger.info(f"{user_id} 簽到 {self.channel_id} 成功")
 
 
