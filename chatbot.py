@@ -317,7 +317,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             cnx = mysql.connector.connect(**config)
             cur = cnx.cursor(buffered=True)
             cur.execute(
-                f"INSERT INTO twitch.clock_in (channel, user_id) VALUES ('{self.channel_id}', '{user_id}');"
+                f"INSERT INTO twitch.clock_in (channel, user_id) VALUES (%s, %s)",
+                (self.channel_id, user_id),
             )
             cur.close()
             cnx.close()
