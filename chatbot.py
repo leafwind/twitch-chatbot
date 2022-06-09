@@ -321,6 +321,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 (self.channel_id, user_id),
             )
             cur.close()
+            cnx.commit()
             cnx.close()
             logger.info(f"{user_id} 簽到 {self.channel_id} 成功")
 
