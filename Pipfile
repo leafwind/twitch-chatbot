@@ -10,6 +10,7 @@ expiringdict = "*"
 cachetools = "*"
 dill = "*"
 pyyaml ="*"
+mysql-connector-python = "*"
 
 [dev-packages]
 pytest = "*"

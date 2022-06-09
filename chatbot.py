@@ -21,6 +21,8 @@ import dill
 import irc.bot
 import yaml
 from expiringdict import ExpiringDict
+import mysql.connector
+
 
 from logger import set_logger
 
@@ -74,7 +76,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             max_len=100, max_age_seconds=TREND_EXPIRE_SEC
         )
 
-        self.dizzy_users = []
+        self.dizzy_users = {}
         self.dizzy_start_ts = 0
         self.dizzy_ban_end_ts = 0
         self.ban_targets = []
@@ -161,18 +163,20 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             if not self.dizzy_users:
                 logger.info(f"沒人上船，開船失敗！")
                 send(self.connection, self.irc_channel, f"沒人上船，開船失敗！")
-                self.dizzy_users = []
+                self.dizzy_users = {}
                 self.ban_targets = []
                 self.dizzy_start_ts = 0
                 self.dizzy_ban_end_ts = 0
             else:
                 n_dizzy_users = (
                     1
-                    if len(self.dizzy_users) < 20
-                    else math.ceil(len(self.dizzy_users) * 0.05)
+                    if len(self.dizzy_users.keys()) < 20
+                    else math.ceil(len(self.dizzy_users.keys()) * 0.05)
                 )
-                self.ban_targets = random.sample(self.dizzy_users, n_dizzy_users)
-                ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
+                self.ban_targets = random.sample(self.dizzy_users.keys(), n_dizzy_users)
+                ban_targets_str = ", ".join(
+                    [f"@{self.dizzy_users[t]}" for t in self.ban_targets]
+                )
                 logger.info(f"抓到了 {ban_targets_str} 你就是暈船仔！")
                 send(
                     self.connection,
@@ -183,13 +187,17 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.dizzy_start_ts + BOARDING_PERIOD + BAN_PERIOD
                 )
         elif now <= self.dizzy_ban_end_ts:
-            ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
+            ban_targets_str = ", ".join(
+                [f"@{self.dizzy_users[t]}" for t in self.ban_targets]
+            )
             logger.info(f"暈船仔 {ban_targets_str} 還在暈")
         elif now > self.dizzy_ban_end_ts > 0:
-            ban_targets_str = ", ".join([f"@{t}" for t in self.ban_targets])
+            ban_targets_str = ", ".join(
+                [f"@{self.dizzy_users[t]}" for t in self.ban_targets]
+            )
             logger.info(f"放 {ban_targets_str} 下船")
             send(self.connection, self.irc_channel, f"放 {ban_targets_str} 下船")
-            self.dizzy_users = []
+            self.dizzy_users = {}
             self.ban_targets = []
             self.dizzy_start_ts = 0
             self.dizzy_ban_end_ts = 0
@@ -250,7 +258,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         # do not talk to myself
         if user_id != self.user_id:
             say_hi(conn, self.irc_channel, self.channel_id, user_id, user_name)
-        logger.info(f"{self.channel_id} | {user_id:>14}: {msg}")
+        logger.info(f"{self.channel_id} | {user_name}({user_id:}): {msg}")
         if user_id in self.ban_targets:
             time.sleep(3)
             send(conn, self.irc_channel, f"/timeout {user_id} 1")
@@ -261,12 +269,12 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         if msg.startswith("!"):
             cmd = msg.split(" ")[0][1:]
             logger.info("Received command: " + cmd)
-            self.do_command(cmd, user_id)
+            self.do_command(cmd, user_id, user_name)
         if msg == "馬娘":
             uma_call(conn, self.irc_channel, self.channel_id, user_name)
         return
 
-    def do_command(self, cmd, user_id):
+    def do_command(self, cmd, user_id, user_name):
         if cmd == "船來了":
             if user_id != self.channel_id:
                 logger.info(f"沒有權限")
@@ -293,11 +301,11 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 )
                 return
             if user_id in self.dizzy_users:
-                logger.info(f"{user_id} 已經在船上了！")
+                logger.info(f"{user_name}({user_id}) 已經在船上了！")
                 return
-            self.dizzy_users.append(user_id)
+            self.dizzy_users[user_id] = user_name
             logger.info(f"乘客 {user_id} 成功上船！")
-            send(self.connection, self.irc_channel, f"乘客 {user_id} 成功上船！")
+            send(self.connection, self.irc_channel, f"乘客 {user_name}({user_id}) 成功上船！")
 
 
 def spawn_bot(channel_id):
