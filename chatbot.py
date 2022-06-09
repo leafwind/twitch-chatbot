@@ -23,6 +23,7 @@ import yaml
 from expiringdict import ExpiringDict
 import mysql.connector
 
+from dotenv import load_dotenv
 
 from logger import set_logger
 
@@ -36,6 +37,8 @@ from utils import (
     say_hi,
     normalize_duplicated_str,
 )
+
+load_dotenv()
 
 
 with open("config/target_channels.yml") as f:
@@ -306,6 +309,18 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             self.dizzy_users[user_id] = user_name
             logger.info(f"乘客 {user_id} 成功上船！")
             send(self.connection, self.irc_channel, f"乘客 {user_name}({user_id}) 成功上船！")
+        if cmd == "簽到":
+            config = {
+                "user": os.environ.get("MYSQL_USER"),
+                "password": os.environ.get("MYSQL_PASSWORD"),
+            }
+            cnx = mysql.connector.connect(**config)
+            cur = cnx.cursor(buffered=True)
+            cur.execute(
+                f"INSERT INTO twitch.clock_in (channel, user_id) VALUES ('{self.channel_id}', '{user_id}');"
+            )
+            cur.close()
+            cnx.close()
 
 
 def spawn_bot(channel_id):
